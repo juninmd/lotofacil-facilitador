@@ -24,7 +24,7 @@ function App() {
         setLatestGameResult(latest);
 
         // Fetch last NUM_RECENT_GAMES and calculate most frequent numbers
-        const lastGames = await getLatestGames(NUM_RECENT_GAMES);
+        const lastGames = await getLatestGames(NUM_RECENT_GAMES, latest);
         if (lastGames.length > 0) {
           const frequent = getMostFrequentNumbers(lastGames);
           setMostFrequentNumbers(frequent);
