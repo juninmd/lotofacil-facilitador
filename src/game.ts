@@ -32,9 +32,12 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
   }
 };
 
-export const getLatestGames = async (count: number): Promise<LotofacilResult[]> => {
+export const getLatestGames = async (count: number, latestGame?: LotofacilResult | null): Promise<LotofacilResult[]> => {
   const games: LotofacilResult[] = [];
-  let latestGame = await getGame(); // Get the very latest game
+
+  if (!latestGame) {
+    latestGame = await getGame(); // Get the very latest game
+  }
 
   if (!latestGame) {
     console.error('Não foi possível obter o último sorteio.');
@@ -43,20 +46,21 @@ export const getLatestGames = async (count: number): Promise<LotofacilResult[]> 
 
   games.push(latestGame);
 
-  let currentNumber = latestGame.numero;
-
-  // Fetch previous games
+  // Fetch previous games in parallel
+  const promises: Promise<LotofacilResult | null>[] = [];
   for (let i = 1; i < count; i++) {
-    currentNumber--;
-    const game = await getGame(currentNumber);
-    if (game) {
-      games.push(game);
-    } else {
-      console.warn(`Não foi possível obter o sorteio número ${currentNumber}.`);
-      // Stop if we can't get a previous game, to avoid infinite loops on missing data
-      break;
+    const previousGameNumber = latestGame.numero - i;
+    if (previousGameNumber > 0) {
+      promises.push(getGame(previousGameNumber));
     }
   }
+
+  const results = await Promise.all(promises);
+  results.forEach(game => {
+    if (game) {
+      games.push(game);
+    }
+  });
 
   return games.sort((a, b) => b.numero - a.numero); // Sort by game number descending
 };
