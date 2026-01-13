@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
+import LotteryBall from './LotteryBall';
 import './App.css';
 
 function App() {
@@ -104,8 +105,10 @@ function App() {
             <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">Buscar Jogo</h2>
               <div className="flex flex-col gap-4">
+                <label htmlFor="gameNumberInput" className="sr-only">Número do jogo</label>
                 <input
-                  type="text"
+                  id="gameNumberInput"
+                  type="number"
                   placeholder="Digite o número do jogo (ex: 2500)"
                   className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   value={gameNumber}
@@ -113,15 +116,19 @@ function App() {
                 />
                 <button
                   onClick={handleSearchGame}
-                  className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-200"
+                  className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-200 focus-visible:ring-4 focus-visible:ring-blue-300"
                 >
                   Buscar Jogo
                 </button>
               </div>
               {gameResult && (
-                <div className="mt-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md">
-                  <p className="font-semibold">Dezenas do jogo {gameResult.numero} ({gameResult.dataApuracao}):</p>
-                  <p className="text-lg">{gameResult.listaDezenas.join(', ')}</p>
+                <div className="mt-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md" role="region" aria-label="Resultado da busca">
+                  <p className="font-semibold mb-2">Dezenas do jogo {gameResult.numero} ({gameResult.dataApuracao}):</p>
+                  <div className="flex flex-wrap gap-2">
+                    {gameResult.listaDezenas.map((num) => (
+                      <LotteryBall key={num} number={num} colorClass="bg-green-600 text-white" />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -140,9 +147,13 @@ function App() {
                 Gerar Jogo
               </button>
               {suggestedGame && (
-                <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md">
-                  <p className="font-semibold">Seu jogo sugerido:</p>
-                  <p className="text-lg font-bold">{suggestedGame.join(', ')}</p>
+                <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md" role="region" aria-label="Jogo sugerido">
+                  <p className="font-semibold mb-2">Seu jogo sugerido:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedGame.map((num) => (
+                      <LotteryBall key={num} number={num} colorClass="bg-purple-600 text-white" />
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -153,10 +164,14 @@ function App() {
             <h2 className="text-2xl font-semibold text-gray-800 mb-4">Estatísticas da Lotofácil</h2>
 
             {latestGameResult && (
-              <div className="mb-6 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md">
+              <div className="mb-6 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md" role="region" aria-label="Último sorteio">
                 <h3 className="text-xl font-semibold mb-2">Último Sorteio: {latestGameResult.numero}</h3>
-                <p className="text-lg">Data: {latestGameResult.dataApuracao}</p>
-                <p className="text-lg font-bold">Dezenas: {latestGameResult.listaDezenas.join(', ')}</p>
+                <p className="text-lg mb-2">Data: {latestGameResult.dataApuracao}</p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {latestGameResult.listaDezenas.map((num) => (
+                    <LotteryBall key={num} number={num} colorClass="bg-blue-600 text-white" sizeClass="w-8 h-8 text-sm" />
+                  ))}
+                </div>
               </div>
             )}
 
