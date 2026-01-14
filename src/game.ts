@@ -32,9 +32,9 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
   }
 };
 
-export const getLatestGames = async (count: number, latestGame?: LotofacilResult | null): Promise<LotofacilResult[]> => {
+export const getLatestGames = async (count: number, providedLatestGame?: LotofacilResult | null): Promise<LotofacilResult[]> => {
   const games: LotofacilResult[] = [];
-  const latestGame = await getGame(); // Get the very latest game
+  const latestGame = providedLatestGame || await getGame(); // Get the very latest game if not provided
 
   if (!latestGame) {
     console.error('Não foi possível obter o último sorteio.');

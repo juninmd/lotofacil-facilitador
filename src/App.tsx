@@ -13,6 +13,7 @@ function App() {
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
     const fetchLotofacilData = async () => {
@@ -55,6 +56,18 @@ function App() {
     } else {
       setError(`Não foi possível obter as dezenas para o jogo ${game}.`);
     }
+  };
+
+  const handleCopySuggested = () => {
+    if (!suggestedGame) return;
+    const text = suggestedGame.join(' ');
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      const timer = setTimeout(() => setCopied(false), 2000);
+      return () => clearTimeout(timer); // Note: this return is ignored here, just conceptually right.
+    }).catch(err => {
+      console.error('Failed to copy: ', err);
+    });
   };
 
   const generateSuggestedGame = () => {
@@ -148,7 +161,32 @@ function App() {
               </button>
               {suggestedGame && (
                 <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md" role="region" aria-label="Jogo sugerido">
-                  <p className="font-semibold mb-2">Seu jogo sugerido:</p>
+                  <div className="flex justify-between items-center mb-2">
+                    <p className="font-semibold">Seu jogo sugerido:</p>
+                    <button
+                      onClick={handleCopySuggested}
+                      className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
+                      aria-label="Copiar jogo sugerido"
+                      title="Copiar números"
+                    >
+                      {copied ? (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                          Copiado!
+                        </>
+                      ) : (
+                        <>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                          </svg>
+                          Copiar
+                        </>
+                      )}
+                    </button>
+                  </div>
                   <div className="flex flex-wrap gap-2">
                     {suggestedGame.map((num) => (
                       <LotteryBall key={num} number={num} colorClass="bg-purple-600 text-white" />
