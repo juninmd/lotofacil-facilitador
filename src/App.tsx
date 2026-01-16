@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
 import LotteryBall from './LotteryBall';
-import './App.css';
 
 function App() {
   const NUM_RECENT_GAMES = 30; // Constante para o número de sorteios recentes
@@ -252,12 +251,23 @@ function App() {
               </div>
             )}
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Números Mais Sorteados (Últimos {NUM_RECENT_GAMES} Sorteios)</h3>
+            <h3 className="text-xl font-semibold text-gray-800 mb-4">Números Mais Sorteados (Top 10)</h3>
             {mostFrequentNumbers.length > 0 ? (
-              <ul className="list-disc list-inside text-gray-700">
-                {mostFrequentNumbers.map((item, index) => (
-                  <li key={index} className="mb-1">
-                    <span className="font-semibold">{item.number}</span>: {item.count} vezes
+              <ul className="space-y-3">
+                {mostFrequentNumbers.slice(0, 10).map((item) => (
+                  <li key={item.number} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
+                    <div className="flex items-center gap-3">
+                      <LotteryBall
+                        number={item.number}
+                        sizeClass="w-8 h-8 text-sm"
+                        colorClass="bg-orange-500 text-white"
+                      />
+                      <span className="sr-only">Número {item.number}</span>
+                    </div>
+                    <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                      <span className="text-sm font-bold text-gray-700">{item.count}</span>
+                      <span className="text-xs text-gray-500">vezes</span>
+                    </div>
                   </li>
                 ))}
               </ul>
