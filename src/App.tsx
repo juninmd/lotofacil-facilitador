@@ -1,15 +1,18 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
+import { generateSmartGame, backtestGame, type BacktestResult } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 
 function App() {
-  const NUM_RECENT_GAMES = 30; // Constante para o número de sorteios recentes
+  const NUM_RECENT_GAMES = 100; // Constante para o número de sorteios recentes (Aumentado para melhor estatística)
 
   const [gameNumber, setGameNumber] = useState<string>('');
   const [gameResult, setGameResult] = useState<LotofacilResult | null>(null);
   const [latestGameResult, setLatestGameResult] = useState<LotofacilResult | null>(null);
   const [mostFrequentNumbers, setMostFrequentNumbers] = useState<{ number: number; count: number }[]>([]);
+  const [allFetchedGames, setAllFetchedGames] = useState<LotofacilResult[]>([]);
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
+  const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searching, setSearching] = useState<boolean>(false);
@@ -27,6 +30,7 @@ function App() {
         // Fetch last NUM_RECENT_GAMES and calculate most frequent numbers
         const lastGames = await getLatestGames(NUM_RECENT_GAMES, latest);
         if (lastGames.length > 0) {
+          setAllFetchedGames(lastGames);
           const frequent = getMostFrequentNumbers(lastGames);
           setMostFrequentNumbers(frequent);
         }
@@ -79,32 +83,19 @@ function App() {
   };
 
   const generateSuggestedGame = () => {
-    if (mostFrequentNumbers.length === 0) {
+    if (allFetchedGames.length === 0) {
       setError("Não há dados suficientes para gerar um jogo sugerido.");
       setSuggestedGame(null);
       return;
     }
 
-    const suggested: number[] = [];
-    const allNumbers = Array.from({ length: 25 }, (_, i) => i + 1); // Numbers 1 to 25
+    // Utiliza o novo algoritmo "Smart"
+    const suggested = generateSmartGame(allFetchedGames);
+    setSuggestedGame(suggested);
 
-    // Prioritize the most frequent numbers
-    for (let i = 0; i < mostFrequentNumbers.length && suggested.length < 15; i++) {
-      const num = mostFrequentNumbers[i].number;
-      if (!suggested.includes(num)) {
-        suggested.push(num);
-      }
-    }
-
-    // Fill the rest with random numbers from the remaining pool
-    const remainingNumbers = allNumbers.filter(num => !suggested.includes(num));
-    while (suggested.length < 15 && remainingNumbers.length > 0) {
-      const randomIndex = Math.floor(Math.random() * remainingNumbers.length);
-      suggested.push(remainingNumbers[randomIndex]);
-      remainingNumbers.splice(randomIndex, 1); // Remove to avoid duplicates
-    }
-
-    setSuggestedGame(suggested.sort((a, b) => a - b));
+    // Executa o Backtest automaticamente
+    const result = backtestGame(suggested, allFetchedGames);
+    setBacktestResult(result);
   };
 
   return (
@@ -225,11 +216,42 @@ function App() {
                       )}
                     </button>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-2 mb-4">
                     {suggestedGame.map((num) => (
                       <LotteryBall key={num} number={num} colorClass="bg-purple-600 text-white" />
                     ))}
                   </div>
+
+                  {backtestResult && (
+                    <div className="mt-4 pt-4 border-t border-yellow-200">
+                      <h3 className="font-semibold text-yellow-900 mb-2">Probabilidade Histórica (Backtest)</h3>
+                      <p className="text-sm text-yellow-800 mb-2">
+                        Se você tivesse jogado esses números nos últimos {backtestResult.totalGames} sorteios:
+                      </p>
+                      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
+                        <div className="bg-white/50 p-2 rounded">
+                          <div className="font-bold text-lg text-yellow-900">{backtestResult[11]}</div>
+                          <div className="text-xs text-yellow-800">11 Pontos</div>
+                        </div>
+                        <div className="bg-white/50 p-2 rounded">
+                          <div className="font-bold text-lg text-yellow-900">{backtestResult[12]}</div>
+                          <div className="text-xs text-yellow-800">12 Pontos</div>
+                        </div>
+                        <div className="bg-white/50 p-2 rounded">
+                          <div className="font-bold text-lg text-yellow-900">{backtestResult[13]}</div>
+                          <div className="text-xs text-yellow-800">13 Pontos</div>
+                        </div>
+                        <div className="bg-white/50 p-2 rounded">
+                          <div className="font-bold text-lg text-yellow-900">{backtestResult[14]}</div>
+                          <div className="text-xs text-yellow-800">14 Pontos</div>
+                        </div>
+                        <div className="bg-white/50 p-2 rounded border border-yellow-400">
+                          <div className="font-bold text-lg text-yellow-900">{backtestResult[15]}</div>
+                          <div className="text-xs text-yellow-800">15 Pontos</div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

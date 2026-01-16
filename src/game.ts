@@ -18,10 +18,18 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
       return null;
     }
 
-    const data: LotofacilResult = await response.json();
+    const data: unknown = await response.json();
 
-    if (data && data.listaDezenas && Array.isArray(data.listaDezenas)) {
-      return data;
+    if (
+      data &&
+      typeof data === 'object' &&
+      'listaDezenas' in data &&
+      Array.isArray((data as { listaDezenas: unknown[] }).listaDezenas)
+    ) {
+      const result = data as LotofacilResult;
+      // Ensure dezenas are numbers
+      result.listaDezenas = result.listaDezenas.map((d: string | number) => Number(d));
+      return result;
     } else {
       console.warn('Resposta da API não contém listaDezenas ou não é um array:', data);
       return null;
