@@ -13,6 +13,7 @@ function App() {
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [searching, setSearching] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -50,11 +51,19 @@ function App() {
     }
     const game = parseInt(gameNumber);
 
-    const result = await getGame(game);
-    if (result) {
-      setGameResult(result);
-    } else {
-      setError(`Não foi possível obter as dezenas para o jogo ${game}.`);
+    setSearching(true);
+    try {
+      const result = await getGame(game);
+      if (result) {
+        setGameResult(result);
+      } else {
+        setError(`Não foi possível obter as dezenas para o jogo ${game}.`);
+      }
+    } catch (err) {
+      console.error(err);
+      setError(`Erro ao buscar o jogo ${game}.`);
+    } finally {
+      setSearching(false);
     }
   };
 
@@ -129,9 +138,39 @@ function App() {
                 />
                 <button
                   onClick={handleSearchGame}
-                  className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-200 focus-visible:ring-4 focus-visible:ring-blue-300"
+                  disabled={searching}
+                  className={`bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-200 focus-visible:ring-4 focus-visible:ring-blue-300 flex justify-center items-center gap-2 ${
+                    searching ? 'opacity-75 cursor-not-allowed' : ''
+                  }`}
+                  aria-busy={searching}
                 >
-                  Buscar Jogo
+                  {searching ? (
+                    <>
+                      <svg
+                        className="animate-spin h-5 w-5 text-white"
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-25"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                        ></circle>
+                        <path
+                          className="opacity-75"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                        ></path>
+                      </svg>
+                      Buscando...
+                    </>
+                  ) : (
+                    'Buscar Jogo'
+                  )}
                 </button>
               </div>
               {gameResult && (
