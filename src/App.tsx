@@ -131,21 +131,21 @@ function App() {
 
             {/* Área para Gerar Jogo Sugerido */}
             <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Sugerido</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Inteligente</h2>
               <p className="text-gray-600 mb-4">
-                Com base nos números mais sorteados dos últimos {NUM_RECENT_GAMES} sorteios, gere um jogo com maior probabilidade.
+                Utiliza análise estatística avançada (pesos por frequência e padrões de paridade/soma) baseada nos últimos {NUM_RECENT_GAMES} sorteios para aumentar suas chances.
               </p>
               <button
                 onClick={generateSuggestedGame}
                 className="bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition duration-200"
                 disabled={loading || mostFrequentNumbers.length === 0}
               >
-                Gerar Jogo
+                Gerar Palpite Inteligente
               </button>
               {suggestedGame && (
                 <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md" role="region" aria-label="Jogo sugerido">
                   <div className="flex justify-between items-center mb-2">
-                    <p className="font-semibold">Seu jogo sugerido:</p>
+                    <p className="font-semibold">Seu palpite otimizado:</p>
                     <button
                       onClick={handleCopySuggested}
                       className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
@@ -178,21 +178,27 @@ function App() {
 
                   {backtestResult && (
                     <div className="mt-4 pt-4 border-t border-yellow-200">
-                      <h3 className="font-semibold text-yellow-900 mb-2">Probabilidade Histórica (Backtest)</h3>
+                      <h3 className="font-semibold text-yellow-900 mb-2">Análise de Performance (Backtest)</h3>
                       <p className="text-sm text-yellow-800 mb-2">
-                        Se você tivesse jogado esses números nos últimos {backtestResult.totalGames} sorteios:
+                        Performance deste jogo nos últimos {backtestResult.totalGames} concursos:
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                         <div className="bg-white/50 p-2 rounded">
-                          <div className="font-bold text-lg text-yellow-900">{backtestResult[11]}</div>
+                          <div className="font-bold text-lg text-yellow-900">
+                            {backtestResult[11]} <span className="text-xs font-normal">({((backtestResult[11] / backtestResult.totalGames) * 100).toFixed(1)}%)</span>
+                          </div>
                           <div className="text-xs text-yellow-800">11 Pontos</div>
                         </div>
                         <div className="bg-white/50 p-2 rounded">
-                          <div className="font-bold text-lg text-yellow-900">{backtestResult[12]}</div>
+                          <div className="font-bold text-lg text-yellow-900">
+                            {backtestResult[12]} <span className="text-xs font-normal">({((backtestResult[12] / backtestResult.totalGames) * 100).toFixed(1)}%)</span>
+                          </div>
                           <div className="text-xs text-yellow-800">12 Pontos</div>
                         </div>
                         <div className="bg-white/50 p-2 rounded">
-                          <div className="font-bold text-lg text-yellow-900">{backtestResult[13]}</div>
+                          <div className="font-bold text-lg text-yellow-900">
+                            {backtestResult[13]} <span className="text-xs font-normal">({((backtestResult[13] / backtestResult.totalGames) * 100).toFixed(1)}%)</span>
+                          </div>
                           <div className="text-xs text-yellow-800">13 Pontos</div>
                         </div>
                         <div className="bg-white/50 p-2 rounded">
