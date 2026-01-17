@@ -210,6 +210,15 @@ function App() {
                           <div className="text-xs text-yellow-800">15 Pontos</div>
                         </div>
                       </div>
+
+                      {backtestResult.totalPrize > 0 && (
+                        <div className="mt-4 text-center">
+                          <p className="text-sm text-yellow-800">Estimativa de prêmio total acumulado no período:</p>
+                          <p className="text-2xl font-bold text-green-700">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(backtestResult.totalPrize)}
+                          </p>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

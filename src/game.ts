@@ -1,8 +1,15 @@
+export interface LotofacilPremio {
+  faixa: number;
+  numeroDeGanhadores: number;
+  valorPremio: number;
+  descricaoFaixa: string;
+}
+
 export interface LotofacilResult {
   numero: number;
   listaDezenas: number[];
   dataApuracao: string;
-  // Adicione outros campos relevantes se necessário
+  listaRateioPremio: LotofacilPremio[];
 }
 
 const gameCache = new Map<number, Promise<LotofacilResult | null>>();

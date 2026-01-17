@@ -7,6 +7,7 @@ export interface BacktestResult {
   14: number;
   15: number;
   totalGames: number;
+  totalPrize: number;
 }
 
 export const calculateStats = (games: LotofacilResult[]) => {
@@ -52,6 +53,7 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
     14: 0,
     15: 0,
     totalGames: history.length,
+    totalPrize: 0,
   };
 
   const selectionSet = new Set(selection);
@@ -64,6 +66,17 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
 
     if (hits >= 11 && hits <= 15) {
       result[hits as 11 | 12 | 13 | 14 | 15]++;
+
+      // Calculate prize
+      // Faixa 1 = 15 hits, Faixa 2 = 14 hits, ..., Faixa 5 = 11 hits
+      const targetFaixa = 16 - hits;
+
+      if (game.listaRateioPremio) {
+        const premio = game.listaRateioPremio.find(p => p.faixa === targetFaixa);
+        if (premio) {
+          result.totalPrize += premio.valorPremio;
+        }
+      }
     }
   });
 
