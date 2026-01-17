@@ -8,23 +8,25 @@ interface GameSearchFormProps {
 const GameSearchForm: React.FC<GameSearchFormProps> = ({ onSearch, searching }) => {
   const [gameNumber, setGameNumber] = useState<string>('');
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
     onSearch(gameNumber);
   };
 
   return (
-    <div className="flex flex-col gap-4">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label htmlFor="gameNumberInput" className="sr-only">Número do jogo</label>
       <input
         id="gameNumberInput"
         type="number"
+        inputMode="numeric"
         placeholder="Digite o número do jogo (ex: 2500)"
         className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         value={gameNumber}
         onChange={(e) => setGameNumber(e.target.value)}
       />
       <button
-        onClick={handleSubmit}
+        type="submit"
         disabled={searching}
         className={`bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-200 focus-visible:ring-4 focus-visible:ring-blue-300 flex justify-center items-center gap-2 ${
           searching ? 'opacity-75 cursor-not-allowed' : ''
@@ -59,7 +61,7 @@ const GameSearchForm: React.FC<GameSearchFormProps> = ({ onSearch, searching }) 
           'Buscar Jogo'
         )}
       </button>
-    </div>
+    </form>
   );
 };
 
