@@ -7,6 +7,7 @@ export interface BacktestResult {
   14: number;
   15: number;
   totalGames: number;
+  totalPrize: number;
 }
 
 export const calculateStats = (games: LotofacilResult[]) => {
@@ -52,6 +53,7 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
     14: 0,
     15: 0,
     totalGames: history.length,
+    totalPrize: 0,
   };
 
   const selectionSet = new Set(selection);
@@ -64,6 +66,17 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
 
     if (hits >= 11 && hits <= 15) {
       result[hits as 11 | 12 | 13 | 14 | 15]++;
+
+      // Calculate prize
+      // Faixa 1 = 15 hits, Faixa 2 = 14 hits, ..., Faixa 5 = 11 hits
+      const targetFaixa = 16 - hits;
+
+      if (game.listaRateioPremio) {
+        const premio = game.listaRateioPremio.find(p => p.faixa === targetFaixa);
+        if (premio) {
+          result.totalPrize += premio.valorPremio;
+        }
+      }
     }
   });
 
@@ -75,7 +88,7 @@ const isValidPattern = (numbers: number[], previousGameDezenas?: number[]): bool
   const oddCount = numbers.filter(n => n % 2 !== 0).length;
   const sum = numbers.reduce((a, b) => a + b, 0);
 
-  // Pattern 1: Balanced Odd/Even (usually 8/7 or 7/8, sometimes 9/6 or 6/9)
+  // Pattern 1: Balanced Odd/Even (usually 8/7, 7/8, 9/6 or 6/9)
   const validParity = (oddCount >= 6 && oddCount <= 9);
 
   // Pattern 2: Sum range (usually 180 - 220)
@@ -85,60 +98,90 @@ const isValidPattern = (numbers: number[], previousGameDezenas?: number[]): bool
   let validRepeats = true;
   if (previousGameDezenas) {
     const repeats = numbers.filter(n => previousGameDezenas.includes(n)).length;
-    validRepeats = (repeats >= 7 && repeats <= 11);
+    // Tightened from 7-11 to 8-10 for higher "Smart" accuracy based on Bell Curve
+    validRepeats = (repeats >= 8 && repeats <= 10);
   }
 
   return validParity && validSum && validRepeats;
 };
 
+// Weighted Random Selection Algorithm
+const getWeightedRandomSubset = (
+  items: number[],
+  weights: Map<number, number>,
+  count: number
+): number[] => {
+  const selection = new Set<number>();
+  const pool = [...items];
+
+  while (selection.size < count && pool.length > 0) {
+    // Calculate total weight of currently available pool
+    let totalWeight = 0;
+    for (const num of pool) {
+      // Base weight 1 + Frequency weight
+      // We square the frequency to give even more weight to hot numbers ("Temperature" parameter)
+      // Or keep linear. Linear is safer. Let's do Linear + Base.
+      totalWeight += (weights.get(num) || 0) + 2; // +2 base weight to ensure cold numbers aren't impossible
+    }
+
+    let random = Math.random() * totalWeight;
+    let selectedIndex = -1;
+
+    for (let i = 0; i < pool.length; i++) {
+      const num = pool[i];
+      const weight = (weights.get(num) || 0) + 2;
+      random -= weight;
+      if (random <= 0) {
+        selectedIndex = i;
+        break;
+      }
+    }
+
+    if (selectedIndex !== -1) {
+      selection.add(pool[selectedIndex]);
+      pool.splice(selectedIndex, 1); // Remove from pool
+    } else {
+        // Fallback for floating point errors
+        selection.add(pool[0]);
+        pool.shift();
+    }
+  }
+
+  return Array.from(selection).sort((a, b) => a - b);
+};
+
+
 export const generateSmartGame = (history: LotofacilResult[]): number[] => {
   if (history.length === 0) return [];
 
-  const latestGame = history[0]; // Assumes sorted descending (newest first)
+  const latestGame = history[0];
 
-  // Weighted selection helper
-  // We give higher weight to numbers that appear more often, BUT we also want to mix in some "cold" numbers?
-  // Actually, standard strategy is usually following the trend.
-  // Let's use a simplified weight: Count in last X games.
+  // 1. Calculate Frequencies from the provided history
+  const frequencyMap = new Map<number, number>();
+  // Initialize 1-25 with 0
+  for (let i = 1; i <= 25; i++) frequencyMap.set(i, 0);
+
+  history.forEach(game => {
+      game.listaDezenas.forEach(num => {
+          frequencyMap.set(num, (frequencyMap.get(num) || 0) + 1);
+      });
+  });
 
   const allNumbers = Array.from({ length: 25 }, (_, i) => i + 1);
 
   let bestCandidate: number[] = [];
   let attempts = 0;
-  const maxAttempts = 2000;
+  const maxAttempts = 5000;
 
   while (attempts < maxAttempts) {
-    // Shuffle with weights
-    // Create a pool where numbers exist N times based on their weight?
-    // Or just simple shuffle and check constraints?
-    // Let's try a hybrid:
-    // 1. Pick 9-10 numbers from the "Hot" half (top 15 frequent)
-    // 2. Pick 5-6 numbers from the "Cold" half (bottom 10)
-    // Then check patterns.
+    // Generate based on weights
+    const selection = getWeightedRandomSubset(allNumbers, frequencyMap, 15);
 
-    // Actually, pure random with constraints is often very strong statistically because it mimics the randomness
-    // but filters for the "bell curve" of probability distributions (sum, parity).
-
-    const available = [...allNumbers];
-
-    // We can use the frequency to slightly bias the shuffle if we want,
-    // but let's try pure random + constraints first as it's cleaner.
-    // If we want "AI" feel, we should maybe ensure we include some top frequent numbers.
-
-    // Shuffle available
-    for (let i = available.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [available[i], available[j]] = [available[j], available[i]];
-    }
-
-    const selection = available.slice(0, 15).sort((a, b) => a - b);
-
-    // Check if valid
+    // Check if valid against pattern constraints
     if (isValidPattern(selection, latestGame?.listaDezenas)) {
       return selection;
     }
 
-    // Keep the first generated one just in case we never find a perfect one
     if (attempts === 0) bestCandidate = selection;
     attempts++;
   }
