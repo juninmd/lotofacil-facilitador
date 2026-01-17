@@ -5,16 +5,15 @@ export interface LotofacilResult {
   // Adicione outros campos relevantes se necessário
 }
 
-const apiCache = new Map<string, Promise<LotofacilResult | null>>();
+const gameCache = new Map<number, Promise<LotofacilResult | null>>();
 
 export const getGame = async (gameNumber?: number): Promise<LotofacilResult | null> => {
-  const cacheKey = gameNumber ? gameNumber.toString() : 'latest';
-
-  if (apiCache.has(cacheKey)) {
-    return apiCache.get(cacheKey)!;
+  // If a specific game number is requested and it's in the cache, return the cached promise
+  if (gameNumber && gameCache.has(gameNumber)) {
+    return gameCache.get(gameNumber)!;
   }
 
-  const promise = (async () => {
+  const fetchPromise = (async () => {
     try {
       const url = gameNumber
         ? `https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${gameNumber}`
@@ -39,9 +38,9 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
         // Ensure dezenas are numbers
         result.listaDezenas = result.listaDezenas.map((d: string | number) => Number(d));
 
-        // If we fetched the latest game, cache it by its number as well
+        // If we fetched the latest game (gameNumber undefined), cache it now that we know the number
         if (!gameNumber && result.numero) {
-          apiCache.set(result.numero.toString(), Promise.resolve(result));
+           gameCache.set(result.numero, Promise.resolve(result));
         }
 
         return result;
@@ -55,11 +54,17 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
     }
   })();
 
-  apiCache.set(cacheKey, promise);
+  // Cache the promise if a specific game number was requested
+  if (gameNumber) {
+    gameCache.set(gameNumber, fetchPromise);
+  }
 
-  const result = await promise;
-  if (result === null) {
-    apiCache.delete(cacheKey);
+  // Wait for the result
+  const result = await fetchPromise;
+
+  // If the result is null (error), remove from cache so it can be retried
+  if (result === null && gameNumber) {
+    gameCache.delete(gameNumber);
   }
 
   return result;
