@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, backtestGame, type BacktestResult } from './utils/statistics';
+import { generateSmartGame, backtestGame, simulateBacktest, getCycleMissingNumbers, type BacktestResult, type SimulationResult } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -13,9 +13,12 @@ function App() {
   const [allFetchedGames, setAllFetchedGames] = useState<LotofacilResult[]>([]);
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
+  const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
+  const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searching, setSearching] = useState<boolean>(false);
+  const [simulating, setSimulating] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
   useEffect(() => {
@@ -33,6 +36,10 @@ function App() {
           setAllFetchedGames(lastGames);
           const frequent = getMostFrequentNumbers(lastGames);
           setMostFrequentNumbers(frequent);
+
+          // Calculate Missing Cycle Numbers
+          const missing = getCycleMissingNumbers(lastGames);
+          setMissingInCycle(missing);
         }
       } catch (err) {
         console.error("Erro ao buscar dados da Lotofácil:", err);
@@ -93,9 +100,24 @@ function App() {
     const suggested = generateSmartGame(allFetchedGames);
     setSuggestedGame(suggested);
 
-    // Executa o Backtest automaticamente
+    // Executa o Backtest automaticamente para este jogo específico contra a história
     const result = backtestGame(suggested, allFetchedGames);
     setBacktestResult(result);
+  };
+
+  const runSimulation = () => {
+      if (allFetchedGames.length < 50) {
+          setError("É preciso carregar mais jogos para simular a IA com precisão.");
+          return;
+      }
+      setSimulating(true);
+
+      // Use setTimeout to allow UI update
+      setTimeout(() => {
+          const result = simulateBacktest(allFetchedGames, 20); // Simulate last 20 games
+          setSimulationResult(result);
+          setSimulating(false);
+      }, 100);
   };
 
   return (
@@ -131,17 +153,58 @@ function App() {
 
             {/* Área para Gerar Jogo Sugerido */}
             <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Inteligente</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Inteligente (IA)</h2>
               <p className="text-gray-600 mb-4">
-                Utiliza análise estatística avançada (pesos por frequência e padrões de paridade/soma) baseada nos últimos {NUM_RECENT_GAMES} sorteios para aumentar suas chances.
+                Utiliza análise estatística avançada: frequência ponderada, fechamento de ciclo, primos, Fibonacci e moldura.
               </p>
-              <button
-                onClick={generateSuggestedGame}
-                className="bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition duration-200"
-                disabled={loading || mostFrequentNumbers.length === 0}
-              >
-                Gerar Palpite Inteligente
-              </button>
+
+              <div className="flex gap-4 mb-4 flex-wrap">
+                  <button
+                    onClick={generateSuggestedGame}
+                    className="flex-1 bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition duration-200 disabled:opacity-50"
+                    disabled={loading || mostFrequentNumbers.length === 0}
+                  >
+                    Gerar Palpite Otimizado
+                  </button>
+
+                  <button
+                    onClick={runSimulation}
+                    className="flex-1 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition duration-200 disabled:opacity-50"
+                    disabled={loading || simulating || allFetchedGames.length < 50}
+                  >
+                    {simulating ? 'Simulando...' : 'Validar Algoritmo (Simulação)'}
+                  </button>
+              </div>
+
+              {simulationResult && (
+                 <div className="mb-6 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
+                     <h3 className="font-semibold text-indigo-900 mb-2">Resultado da Simulação (Últimos {simulationResult.gamesSimulated} jogos)</h3>
+                     <p className="text-sm text-indigo-800 mb-2">
+                         O algoritmo tentou prever os últimos {simulationResult.gamesSimulated} resultados usando apenas dados passados.
+                     </p>
+                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
+                         <div className="bg-white p-2 rounded shadow-sm">
+                             <div className="text-xl font-bold text-indigo-700">{simulationResult.averageHits.toFixed(2)}</div>
+                             <div className="text-xs text-gray-500">Média de Acertos</div>
+                         </div>
+                         <div className="bg-white p-2 rounded shadow-sm">
+                             <div className="text-xl font-bold text-green-600">{simulationResult.accuracyDistribution[14] || 0}</div>
+                             <div className="text-xs text-gray-500">14 Pontos</div>
+                         </div>
+                         <div className="bg-white p-2 rounded shadow-sm border border-yellow-300">
+                             <div className="text-xl font-bold text-yellow-600">{simulationResult.accuracyDistribution[15] || 0}</div>
+                             <div className="text-xs text-gray-500">15 Pontos</div>
+                         </div>
+                         <div className="bg-white p-2 rounded shadow-sm">
+                             <div className="text-xl font-bold text-blue-600">
+                                 {((simulationResult.totalHits / (simulationResult.gamesSimulated * 15)) * 100).toFixed(1)}%
+                             </div>
+                             <div className="text-xs text-gray-500">Precisão Global</div>
+                         </div>
+                     </div>
+                 </div>
+              )}
+
               {suggestedGame && (
                 <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md" role="region" aria-label="Jogo sugerido">
                   <div className="flex justify-between items-center mb-2">
@@ -178,9 +241,9 @@ function App() {
 
                   {backtestResult && (
                     <div className="mt-4 pt-4 border-t border-yellow-200">
-                      <h3 className="font-semibold text-yellow-900 mb-2">Análise de Performance (Backtest)</h3>
+                      <h3 className="font-semibold text-yellow-900 mb-2">Histórico deste jogo (Backtest)</h3>
                       <p className="text-sm text-yellow-800 mb-2">
-                        Performance deste jogo nos últimos {backtestResult.totalGames} concursos:
+                        Se você tivesse jogado estes números nos últimos {backtestResult.totalGames} concursos:
                       </p>
                       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-center">
                         <div className="bg-white/50 p-2 rounded">
@@ -227,44 +290,64 @@ function App() {
           </div>
 
           {/* Side Bar Right - Estatísticas */}
-          <div className="bg-gray-50 p-4 border border-gray-200 rounded-md lg:col-span-1"> {/* Side bar takes 1 column */}
-            <h2 className="text-2xl font-semibold text-gray-800 mb-4">Estatísticas da Lotofácil</h2>
+          <div className="bg-gray-50 p-4 border border-gray-200 rounded-md lg:col-span-1 flex flex-col gap-4"> {/* Side bar takes 1 column */}
+            <div>
+                <h2 className="text-2xl font-semibold text-gray-800 mb-4">Estatísticas</h2>
 
-            {latestGameResult && (
-              <div className="mb-6 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md" role="region" aria-label="Último sorteio">
-                <h3 className="text-xl font-semibold mb-2">Último Sorteio: {latestGameResult.numero}</h3>
-                <p className="text-lg mb-2">Data: {latestGameResult.dataApuracao}</p>
-                <div className="flex flex-wrap gap-2 justify-center">
-                  {latestGameResult.listaDezenas.map((num) => (
-                    <LotteryBall key={num} number={num} colorClass="bg-blue-600 text-white" sizeClass="w-8 h-8 text-sm" />
-                  ))}
-                </div>
-              </div>
-            )}
+                {latestGameResult && (
+                  <div className="mb-6 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md" role="region" aria-label="Último sorteio">
+                    <h3 className="text-xl font-semibold mb-2">Último Sorteio: {latestGameResult.numero}</h3>
+                    <p className="text-lg mb-2">Data: {latestGameResult.dataApuracao}</p>
+                    <div className="flex flex-wrap gap-2 justify-center">
+                      {latestGameResult.listaDezenas.map((num) => (
+                        <LotteryBall key={num} number={num} colorClass="bg-blue-600 text-white" sizeClass="w-8 h-8 text-sm" />
+                      ))}
+                    </div>
+                  </div>
+                )}
+            </div>
 
-            <h3 className="text-xl font-semibold text-gray-800 mb-4">Números Mais Sorteados (Top 10)</h3>
-            {mostFrequentNumbers.length > 0 ? (
-              <ul className="space-y-3">
-                {mostFrequentNumbers.slice(0, 10).map((item) => (
-                  <li key={item.number} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
-                    <div className="flex items-center gap-3">
-                      <LotteryBall
-                        number={item.number}
-                        sizeClass="w-8 h-8 text-sm"
-                        colorClass="bg-orange-500 text-white"
-                      />
-                      <span className="sr-only">Número {item.number}</span>
+            <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-2">Ciclo das Dezenas</h3>
+                <p className="text-sm text-gray-600 mb-2">Números que faltam sair para fechar o ciclo atual. Estatisticamente têm alta probabilidade.</p>
+                {missingInCycle.length > 0 ? (
+                    <div className="flex flex-wrap gap-2 p-3 bg-white rounded border border-gray-200">
+                        {missingInCycle.map(num => (
+                            <LotteryBall key={num} number={num} colorClass="bg-red-500 text-white" sizeClass="w-8 h-8 text-sm" />
+                        ))}
                     </div>
-                    <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
-                      <span className="text-sm font-bold text-gray-700">{item.count}</span>
-                      <span className="text-xs text-gray-500">vezes</span>
+                ) : (
+                    <div className="p-3 bg-green-100 text-green-800 rounded border border-green-200 text-sm">
+                        Ciclo fechado! Todos os números saíram recentemente. Um novo ciclo se inicia.
                     </div>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              !loading && <p className="text-gray-600">Nenhum dado disponível para os números mais sorteados.</p>
-            )}
+                )}
+            </div>
+
+            <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Números Quentes (Top 10)</h3>
+                {mostFrequentNumbers.length > 0 ? (
+                  <ul className="space-y-3">
+                    {mostFrequentNumbers.slice(0, 10).map((item) => (
+                      <li key={item.number} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
+                        <div className="flex items-center gap-3">
+                          <LotteryBall
+                            number={item.number}
+                            sizeClass="w-8 h-8 text-sm"
+                            colorClass="bg-orange-500 text-white"
+                          />
+                          <span className="sr-only">Número {item.number}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                          <span className="text-sm font-bold text-gray-700">{item.count}</span>
+                          <span className="text-xs text-gray-500">vezes</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  !loading && <p className="text-gray-600">Nenhum dado disponível para os números mais sorteados.</p>
+                )}
+            </div>
           </div>
         </div>
       </div>
