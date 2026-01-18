@@ -245,22 +245,33 @@ function App() {
             <h3 className="text-xl font-semibold text-gray-800 mb-4">Números Mais Sorteados (Top 10)</h3>
             {mostFrequentNumbers.length > 0 ? (
               <ul className="space-y-3">
-                {mostFrequentNumbers.slice(0, 10).map((item) => (
-                  <li key={item.number} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
-                    <div className="flex items-center gap-3">
-                      <LotteryBall
-                        number={item.number}
-                        sizeClass="w-8 h-8 text-sm"
-                        colorClass="bg-orange-500 text-white"
+                {mostFrequentNumbers.slice(0, 10).map((item, _, arr) => {
+                  const maxCount = arr[0]?.count || 1;
+                  const percentage = (item.count / maxCount) * 100;
+
+                  return (
+                    <li key={item.number} className="relative overflow-hidden p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
+                      <div
+                        className="absolute left-0 top-0 bottom-0 bg-orange-50 transition-all duration-1000 ease-out"
+                        style={{ width: `${percentage}%` }}
                       />
-                      <span className="sr-only">Número {item.number}</span>
-                    </div>
-                    <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
-                      <span className="text-sm font-bold text-gray-700">{item.count}</span>
-                      <span className="text-xs text-gray-500">vezes</span>
-                    </div>
-                  </li>
-                ))}
+                      <div className="relative z-10 flex items-center justify-between w-full">
+                        <div className="flex items-center gap-3">
+                          <LotteryBall
+                            number={item.number}
+                            sizeClass="w-8 h-8 text-sm"
+                            colorClass="bg-orange-500 text-white"
+                          />
+                          <span className="sr-only">Número {item.number}</span>
+                        </div>
+                        <div className="flex items-center gap-1 bg-white/80 px-2 py-1 rounded backdrop-blur-sm">
+                          <span className="text-sm font-bold text-gray-700">{item.count}</span>
+                          <span className="text-xs text-gray-500">vezes</span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
               </ul>
             ) : (
               !loading && <p className="text-gray-600">Nenhum dado disponível para os números mais sorteados.</p>
