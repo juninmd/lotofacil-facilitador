@@ -21,6 +21,8 @@ function App() {
   const [simulating, setSimulating] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
 
+  const maxFrequency = mostFrequentNumbers.length > 0 ? mostFrequentNumbers[0].count : 1;
+
   useEffect(() => {
     const fetchLotofacilData = async () => {
       setLoading(true);
@@ -328,8 +330,13 @@ function App() {
                 {mostFrequentNumbers.length > 0 ? (
                   <ul className="space-y-3">
                     {mostFrequentNumbers.slice(0, 10).map((item) => (
-                      <li key={item.number} className="flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
-                        <div className="flex items-center gap-3">
+                      <li key={item.number} className="relative overflow-hidden flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
+                        <div
+                          className="absolute left-0 top-0 bottom-0 bg-orange-50 transition-all duration-500 ease-out"
+                          style={{ width: `${(item.count / maxFrequency) * 100}%` }}
+                          aria-hidden="true"
+                        />
+                        <div className="relative z-10 flex items-center gap-3">
                           <LotteryBall
                             number={item.number}
                             sizeClass="w-8 h-8 text-sm"
@@ -337,7 +344,7 @@ function App() {
                           />
                           <span className="sr-only">Número {item.number}</span>
                         </div>
-                        <div className="flex items-center gap-1 bg-gray-50 px-2 py-1 rounded">
+                        <div className="relative z-10 flex items-center gap-1 bg-white/80 px-2 py-1 rounded border border-gray-100/50 backdrop-blur-[1px]">
                           <span className="text-sm font-bold text-gray-700">{item.count}</span>
                           <span className="text-xs text-gray-500">vezes</span>
                         </div>
