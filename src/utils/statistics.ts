@@ -288,7 +288,6 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   let bestCandidate: number[] = [];
   let bestScore = -1;
 
-  const CANDIDATES_TO_GENERATE = 50;
   let attempts = 0;
   const maxAttempts = 2000;
 
