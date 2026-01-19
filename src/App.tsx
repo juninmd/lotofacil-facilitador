@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, backtestGame, simulateBacktest, getCycleMissingNumbers, type BacktestResult, type SimulationResult } from './utils/statistics';
+import { generateSmartGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, type BacktestResult, type SimulationResult } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -15,6 +15,7 @@ function App() {
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
+  const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searching, setSearching] = useState<boolean>(false);
@@ -22,6 +23,7 @@ function App() {
   const [copied, setCopied] = useState<boolean>(false);
 
   const maxFrequency = mostFrequentNumbers.length > 0 ? mostFrequentNumbers[0].count : 1;
+  const maxDelay = delays.length > 0 ? delays[0].count : 1;
 
   useEffect(() => {
     const fetchLotofacilData = async () => {
@@ -42,6 +44,14 @@ function App() {
           // Calculate Missing Cycle Numbers
           const missing = getCycleMissingNumbers(lastGames);
           setMissingInCycle(missing);
+
+          // Calculate Delays
+          const delaysMap = calculateDelays(lastGames);
+          const sortedDelays = Array.from(delaysMap.entries())
+              .sort((a, b) => b[1] - a[1]) // High delay first
+              .slice(0, 10) // Top 10
+              .map(([num, count]) => ({ number: num, count }));
+          setDelays(sortedDelays);
         }
       } catch (err) {
         console.error("Erro ao buscar dados da Lotofácil:", err);
@@ -157,7 +167,7 @@ function App() {
             <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Inteligente (IA)</h2>
               <p className="text-gray-600 mb-4">
-                Utiliza análise estatística avançada: frequência ponderada, fechamento de ciclo, primos, Fibonacci e moldura.
+                Utiliza algoritmo otimizado (Frequência + Atraso + Ciclo + Pontuação Estatística).
               </p>
 
               <div className="flex gap-4 mb-4 flex-wrap">
@@ -322,6 +332,37 @@ function App() {
                     <div className="p-3 bg-green-100 text-green-800 rounded border border-green-200 text-sm">
                         Ciclo fechado! Todos os números saíram recentemente. Um novo ciclo se inicia.
                     </div>
+                )}
+            </div>
+
+            <div>
+                <h3 className="text-xl font-semibold text-gray-800 mb-4">Números mais atrasados</h3>
+                 {delays.length > 0 ? (
+                  <ul className="space-y-3 mb-6">
+                    {delays.map((item) => (
+                      <li key={item.number} className="relative overflow-hidden flex items-center justify-between p-2 bg-white rounded-lg shadow-sm border border-gray-100 transition hover:shadow-md">
+                        <div
+                          className="absolute left-0 top-0 bottom-0 bg-red-50 transition-all duration-500 ease-out"
+                          style={{ width: `${(item.count / maxDelay) * 100}%` }}
+                          aria-hidden="true"
+                        />
+                        <div className="relative z-10 flex items-center gap-3">
+                          <LotteryBall
+                            number={item.number}
+                            sizeClass="w-8 h-8 text-sm"
+                            colorClass="bg-red-500 text-white"
+                          />
+                          <span className="sr-only">Número {item.number}</span>
+                        </div>
+                        <div className="relative z-10 flex items-center gap-1 bg-white/80 px-2 py-1 rounded border border-gray-100/50 backdrop-blur-[1px]">
+                          <span className="text-sm font-bold text-gray-700">{item.count}</span>
+                          <span className="text-xs text-gray-500">jogos</span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                ) : (
+                  !loading && <p className="text-gray-600">Calculando atrasos...</p>
                 )}
             </div>
 
