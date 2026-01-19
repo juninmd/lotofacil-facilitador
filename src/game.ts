@@ -88,21 +88,33 @@ export const getLatestGames = async (count: number, providedLatestGame?: Lotofac
 
   games.push(latestGame);
 
-  // Fetch previous games in parallel
-  const promises: Promise<LotofacilResult | null>[] = [];
-  for (let i = 1; i < count; i++) {
-    const previousGameNumber = latestGame.numero - i;
-    if (previousGameNumber > 0) {
-      promises.push(getGame(previousGameNumber));
+  // Fetch previous games in batches to avoid Rate Limiting (429)
+  const batchSize = 5;
+  const delayMs = 300;
+
+  for (let i = 1; i < count; i += batchSize) {
+    const batchPromises: Promise<LotofacilResult | null>[] = [];
+
+    for (let j = i; j < i + batchSize && j < count; j++) {
+      const previousGameNumber = latestGame.numero - j;
+      if (previousGameNumber > 0) {
+        batchPromises.push(getGame(previousGameNumber));
+      }
+    }
+
+    const batchResults = await Promise.all(batchPromises);
+
+    batchResults.forEach(game => {
+      if (game) {
+        games.push(game);
+      }
+    });
+
+    // Add delay between batches if not the last batch
+    if (i + batchSize < count) {
+      await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
-
-  const results = await Promise.all(promises);
-  results.forEach(game => {
-    if (game) {
-      games.push(game);
-    }
-  });
 
   return games.sort((a, b) => b.numero - a.numero); // Sort by game number descending
 };

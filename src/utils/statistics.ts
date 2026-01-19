@@ -153,7 +153,7 @@ const gaussianScore = (value: number, mean: number, sigma: number): number => {
 };
 
 // Score a candidate game based on statistical ideal distribution
-const scoreCandidate = (numbers: number[]): number => {
+const scoreCandidate = (numbers: number[], previousGameDezenas?: number[]): number => {
     const oddCount = numbers.filter(n => n % 2 !== 0).length;
     const sum = numbers.reduce((a, b) => a + b, 0);
     const primesCount = numbers.filter(n => PRIMES.has(n)).length;
@@ -165,7 +165,18 @@ const scoreCandidate = (numbers: number[]): number => {
     const scorePrime = gaussianScore(primesCount, 5, 1.2);
     const scoreFib = gaussianScore(fibCount, 4, 1.2);
 
-    return (scoreOdd * 0.3) + (scoreSum * 0.3) + (scorePrime * 0.2) + (scoreFib * 0.2);
+    let scoreRepeat = 0;
+    if (previousGameDezenas) {
+        const repeatCount = numbers.filter(n => previousGameDezenas.includes(n)).length;
+        scoreRepeat = gaussianScore(repeatCount, 9, 1.0); // Mean 9, Sigma 1.0 (Strict on 9)
+    }
+
+    if (previousGameDezenas) {
+        // High weight on repeating structure as it's a strong predictor
+        return (scoreOdd * 0.15) + (scoreSum * 0.15) + (scorePrime * 0.1) + (scoreFib * 0.1) + (scoreRepeat * 0.5);
+    } else {
+        return (scoreOdd * 0.3) + (scoreSum * 0.3) + (scorePrime * 0.2) + (scoreFib * 0.2);
+    }
 };
 
 // Helper to check if a game matches typical Lotofacil patterns
@@ -239,14 +250,26 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
 
   const latestGame = previousGameOverride || history[0];
 
-  // 1. Calculate Frequencies
+  // 1. Calculate Frequencies (Global and Recent)
   const frequencyMap = new Map<number, number>();
-  for (let i = 1; i <= 25; i++) frequencyMap.set(i, 0);
+  const recentFrequencyMap = new Map<number, number>();
+  for (let i = 1; i <= 25; i++) {
+      frequencyMap.set(i, 0);
+      recentFrequencyMap.set(i, 0);
+  }
 
   const numGames = history.length;
   history.forEach(game => {
       game.listaDezenas.forEach(num => {
           frequencyMap.set(num, (frequencyMap.get(num) || 0) + 1);
+      });
+  });
+
+  // Recent frequency (last 10 games)
+  const recentHistory = history.slice(0, 10);
+  recentHistory.forEach(game => {
+      game.listaDezenas.forEach(num => {
+          recentFrequencyMap.set(num, (recentFrequencyMap.get(num) || 0) + 1);
       });
   });
 
@@ -261,16 +284,20 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   for (let i = 1; i <= 25; i++) {
       const freq = frequencyMap.get(i) || 0;
       const normalizedFreq = freq / numGames;
+      const recentFreq = recentFrequencyMap.get(i) || 0;
       const delay = delays.get(i) || 0;
 
       let weight = 1.0;
 
-      // Frequency Weight: Up to +2.0
-      weight += normalizedFreq * 2.0;
+      // Frequency Weight: Up to +3.0
+      weight += normalizedFreq * 3.0;
 
-      // Cycle Weight: Huge boost
+      // Recent Frequency (Hotness): Up to +4.0 (e.g. 8/10 * 5 = 4.0)
+      weight += (recentFreq / 10) * 5.0;
+
+      // Cycle Weight: Boost
       if (missingInCycle.includes(i)) {
-          weight += 3.0;
+          weight += 2.0;
       }
 
       // Delay Weight: Boost numbers that are "due" but not missing in cycle (cycle handles those)
@@ -289,30 +316,36 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   let bestScore = -1;
 
   let attempts = 0;
-  const maxAttempts = 2000;
+  const maxAttempts = 5000; // Increased attempts for split strategy
+
+  // Split pool strategy
+  const insidePool = latestGame.listaDezenas;
+  const outsidePool = allNumbers.filter(n => !insidePool.includes(n));
 
   while (attempts < maxAttempts) {
-    const selection = getWeightedRandomSubset(allNumbers, weights, 15);
+    // 1. Determine number of repeats (8, 9, or 10)
+    const rand = Math.random();
+    let repeatCount = 9;
+    if (rand < 0.25) repeatCount = 8;
+    else if (rand > 0.85) repeatCount = 10;
+
+    // 2. Select from pools
+    const selectionInside = getWeightedRandomSubset(insidePool, weights, repeatCount);
+    const selectionOutside = getWeightedRandomSubset(outsidePool, weights, 15 - repeatCount);
+
+    const selection = [...selectionInside, ...selectionOutside].sort((a, b) => a - b);
 
     if (isValidPattern(selection, latestGame?.listaDezenas)) {
-        const score = scoreCandidate(selection);
+        const score = scoreCandidate(selection, latestGame?.listaDezenas);
 
         // Optimization: Keep the best score
         if (score > bestScore) {
             bestScore = score;
             bestCandidate = selection;
         }
-
-        // If we found enough valid candidates to compare, stop early?
-        // Let's try to find at least CANDIDATES_TO_GENERATE valid ones, or stop if we hit maxAttempts.
-        // Actually, logic above replaces best. We want to run X times or until we have a "perfect" score?
-        // Let's just run a fixed number of attempts to find *valid* ones, and keep best.
     }
 
-    // We want to stop after we have checked enough *valid* ones?
-    // Or just run maxAttempts? 2000 is fast enough in JS.
-    // But let's optimize: if we found a very high score (> 0.95), return it.
-    if (bestScore > 0.95) break;
+    if (bestScore > 0.98) break;
 
     attempts++;
   }
