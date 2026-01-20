@@ -9,3 +9,7 @@
 ## 2026-01-19 - [Visual Meters for Frequency]
 **Learning:** Adding visual meters (like progress bars) to numeric frequency lists helps users quickly grasp relative scale without parsing each number.
 **Action:** Augment numeric frequency or ranking lists with background progress bars or similar visual indicators of relative magnitude.
+
+## 2026-01-22 - [Action Button Cues]
+**Learning:** Adding icon cues and distinct loading spinners to primary action buttons significantly improves user confidence in complex operations (like AI generation/simulation).
+**Action:** Ensure all async or complex action buttons have both a representative icon and a distinct loading state.
