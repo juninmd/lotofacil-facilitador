@@ -8,6 +8,8 @@ export interface BacktestResult {
   15: number;
   totalGames: number;
   totalPrize: number;
+  totalCost: number;
+  netProfit: number;
 }
 
 export interface SimulationStats {
@@ -20,6 +22,7 @@ export interface SimulationStats {
 export interface SimulationResult {
     smart: SimulationStats;
     random: SimulationStats;
+    max15: SimulationStats;
 }
 
 // Constants for Lotofacil Patterns
@@ -107,6 +110,8 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
     15: 0,
     totalGames: history.length,
     totalPrize: 0,
+    totalCost: 0,
+    netProfit: 0,
   };
 
   const selectionSet = new Set(selection);
@@ -132,6 +137,10 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
       }
     }
   });
+
+  // Calculate Costs and Profit (Price per game R$ 3,00)
+  result.totalCost = result.totalGames * 3.00;
+  result.netProfit = result.totalPrize - result.totalCost;
 
   return result;
 };
@@ -233,7 +242,23 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     }
 
     // Weights: Repeats are very important in Lotofacil
-    return (scoreOdd * 0.2) + (scoreSum * 0.2) + (scorePrime * 0.2) + (scoreRepeats * 0.4);
+    // Optimized for 3591 pattern (which had 9 repeats, exactly the mean)
+    return (scoreOdd * 0.15) + (scoreSum * 0.15) + (scorePrime * 0.15) + (scoreRepeats * 0.55);
+};
+
+export const calculateConfidence = (game: number[], history: LotofacilResult[]): number => {
+    if (history.length === 0) return 0;
+    const stats = getDynamicStats(history);
+    const latestGame = history[0];
+    const score = scoreCandidate(game, stats, latestGame.listaDezenas);
+
+    // Normalize score (theoretical max is approx 1.0)
+    // We map 0.5 - 1.0 range to a percentage "confidence"
+    let confidence = (score - 0.5) * 2 * 100;
+    if (confidence < 0) confidence = 0;
+    if (confidence > 99) confidence = 99;
+
+    return Math.floor(confidence);
 };
 
 const getWeightedRandomSubset = (
@@ -367,16 +392,91 @@ export const generateRandomGame = (): number[] => {
     return selection.sort((a, b) => a - b);
 }
 
+export const generateMax15Game = (history: LotofacilResult[]): number[] => {
+  if (history.length === 0) return [];
+  const latestGame = history[0];
+  const previousNumbers = new Set(latestGame.listaDezenas);
+  const absentNumbers = Array.from({ length: 25 }, (_, i) => i + 1).filter(n => !previousNumbers.has(n));
+
+  // Calculate stats for ranking
+  const frequencyMap = new Map<number, number>();
+  history.forEach(g => g.listaDezenas.forEach(n => frequencyMap.set(n, (frequencyMap.get(n) || 0) + 1)));
+
+  const delays = calculateDelays(history);
+
+  // Helper to score numbers
+  const scoreNumber = (n: number, isAbsent: boolean) => {
+    let score = frequencyMap.get(n) || 0;
+    if (isAbsent) {
+        // Boost absent numbers by delay
+        score += (delays.get(n) || 0) * 2;
+    }
+    return score;
+  };
+
+  // Sort pools
+  const sortedPrevious = [...previousNumbers].sort((a, b) => scoreNumber(b, false) - scoreNumber(a, false));
+  const sortedAbsent = [...absentNumbers].sort((a, b) => scoreNumber(b, true) - scoreNumber(a, true));
+
+  // We need 9 from previous, 6 from absent.
+  // We will take top 12 from previous and top 8 from absent as a "pool" to randomize slightly for validation
+  const poolPrevious = sortedPrevious.slice(0, 12);
+  const poolAbsent = sortedAbsent.slice(0, 8);
+
+  let bestGame: number[] = [];
+  let bestScore = -1;
+
+  for(let i=0; i<500; i++) {
+      // Pick 9 from poolPrevious
+      const p = new Set<number>();
+      while(p.size < 9) {
+          const idx = Math.floor(Math.random() * poolPrevious.length);
+          p.add(poolPrevious[idx]);
+      }
+
+      // Pick 6 from poolAbsent
+      const a = new Set<number>();
+      while(a.size < 6) {
+          const idx = Math.floor(Math.random() * poolAbsent.length);
+          a.add(poolAbsent[idx]);
+      }
+
+      const candidate = [...p, ...a].sort((x, y) => x - y);
+
+      // Validate
+      const oddCount = candidate.filter(n => n % 2 !== 0).length;
+      const primeCount = candidate.filter(n => PRIMES.has(n)).length;
+      const sum = candidate.reduce((acc, curr) => acc + curr, 0);
+
+      let score = 0;
+      // Strict constraints get high score
+      if (oddCount >= 7 && oddCount <= 9) score += 2;
+      if (primeCount >= 4 && primeCount <= 6) score += 2;
+      if (sum >= 180 && sum <= 220) score += 2;
+
+      // Add a bit of frequency score
+      score += candidate.reduce((acc, n) => acc + (frequencyMap.get(n)||0), 0) / 1000;
+
+      if (score > bestScore) {
+          bestScore = score;
+          bestGame = candidate;
+      }
+  }
+
+  return bestGame;
+};
+
 export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations: number = 20): SimulationResult => {
     // We need training data (past games) for each simulation step
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const randomStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const max15Stats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -393,6 +493,12 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         smartStats.totalHits += smartHits;
         smartStats.accuracyDistribution[smartHits] = (smartStats.accuracyDistribution[smartHits] || 0) + 1;
 
+        // Max15 Prediction
+        const max15Prediction = generateMax15Game(trainingData);
+        const max15Hits = max15Prediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        max15Stats.totalHits += max15Hits;
+        max15Stats.accuracyDistribution[max15Hits] = (max15Stats.accuracyDistribution[max15Hits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -401,13 +507,16 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
 
         smartStats.gamesSimulated++;
         randomStats.gamesSimulated++;
+        max15Stats.gamesSimulated++;
     }
 
     if (smartStats.gamesSimulated > 0) smartStats.averageHits = smartStats.totalHits / smartStats.gamesSimulated;
     if (randomStats.gamesSimulated > 0) randomStats.averageHits = randomStats.totalHits / randomStats.gamesSimulated;
+    if (max15Stats.gamesSimulated > 0) max15Stats.averageHits = max15Stats.totalHits / max15Stats.gamesSimulated;
 
     return {
         smart: smartStats,
-        random: randomStats
+        random: randomStats,
+        max15: max15Stats
     };
 };

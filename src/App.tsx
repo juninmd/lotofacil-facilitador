@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, type BacktestResult, type SimulationResult } from './utils/statistics';
+import { generateSmartGame, generateMax15Game, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, type BacktestResult, type SimulationResult } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -12,15 +12,18 @@ function App() {
   const [mostFrequentNumbers, setMostFrequentNumbers] = useState<{ number: number; count: number }[]>([]);
   const [allFetchedGames, setAllFetchedGames] = useState<LotofacilResult[]>([]);
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
+  const [confidence, setConfidence] = useState<number>(0);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15'>('smart');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searching, setSearching] = useState<boolean>(false);
   const [simulating, setSimulating] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [jsCopied, setJsCopied] = useState<boolean>(false);
 
   const maxFrequency = mostFrequentNumbers.length > 0 ? mostFrequentNumbers[0].count : 1;
   const maxDelay = delays.length > 0 ? delays[0].count : 1;
@@ -101,6 +104,28 @@ function App() {
     });
   };
 
+  const handleCopyJS = () => {
+      if (!suggestedGame) return;
+      const jsCode = `
+(function(){
+  const nums = [${suggestedGame.join(',')}];
+  nums.forEach(n => {
+    const id = 'n' + n.toString().padStart(2, '0');
+    const el = document.getElementById(id);
+    if(el) el.click();
+  });
+})();
+      `.trim();
+
+      navigator.clipboard.writeText(jsCode).then(() => {
+          setJsCopied(true);
+          const timer = setTimeout(() => setJsCopied(false), 2000);
+          return () => clearTimeout(timer);
+      }).catch(err => {
+          console.error('Failed to copy JS: ', err);
+      });
+  };
+
   const generateSuggestedGame = () => {
     if (allFetchedGames.length === 0) {
       setError("Não há dados suficientes para gerar um jogo sugerido.");
@@ -108,9 +133,20 @@ function App() {
       return;
     }
 
-    // Utiliza o novo algoritmo "Smart"
-    const suggested = generateSmartGame(allFetchedGames);
+    let suggested: number[];
+
+    if (algorithmType === 'max15') {
+       suggested = generateMax15Game(allFetchedGames);
+    } else {
+       // Utiliza o novo algoritmo "Smart"
+       suggested = generateSmartGame(allFetchedGames);
+    }
+
     setSuggestedGame(suggested);
+
+    // Calculate Confidence
+    const conf = calculateConfidence(suggested, allFetchedGames);
+    setConfidence(conf);
 
     // Executa o Backtest automaticamente para este jogo específico contra a história
     const result = backtestGame(suggested, allFetchedGames);
@@ -167,8 +203,45 @@ function App() {
             <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
               <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Inteligente (IA)</h2>
               <p className="text-gray-600 mb-4">
-                Utiliza algoritmo otimizado (Frequência + Atraso + Ciclo + Pontuação Estatística).
+                Escolha o algoritmo e gere uma sugestão baseada em estatísticas.
               </p>
+
+              {/* Algorithm Selector */}
+              <div className="flex flex-col sm:flex-row gap-4 mb-6">
+                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="algorithm"
+                            value="smart"
+                            checked={algorithmType === 'smart'}
+                            onChange={() => setAlgorithmType('smart')}
+                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                        />
+                        <span className="font-semibold text-gray-800">Algoritmo Equilibrado (Smart)</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 ml-6">
+                        Foca na consistência e médias estatísticas (Gaussiana). Bom para buscar 13 e 14 pontos com frequência.
+                    </p>
+                 </label>
+
+                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="algorithm"
+                            value="max15"
+                            checked={algorithmType === 'max15'}
+                            onChange={() => setAlgorithmType('max15')}
+                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                        />
+                        <span className="font-semibold text-gray-800">Busca 15 Pontos (Agressivo)</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 ml-6">
+                        Estratégia fixa: 9 repetidos do último jogo + 6 ausentes mais atrasados. Foca no padrão mais comum dos 15 pontos.
+                    </p>
+                 </label>
+              </div>
 
               <div className="flex gap-4 mb-4 flex-wrap">
                   <button
@@ -212,7 +285,7 @@ function App() {
                     Comparativo de Eficiência (Últimos {simulationResult.smart.gamesSimulated} jogos)
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {/* Smart Algorithm Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
                       <h4 className="font-bold text-purple-700 mb-3 border-b pb-2">Algoritmo Inteligente</h4>
@@ -233,6 +306,31 @@ function App() {
                            <span className="text-gray-500 text-xs">Precisão Global:</span>
                            <span className="font-bold text-blue-600 text-sm">
                                {((simulationResult.smart.totalHits / (simulationResult.smart.gamesSimulated * 15)) * 100).toFixed(1)}%
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Max 15 Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-teal-600">
+                      <h4 className="font-bold text-teal-700 mb-3 border-b pb-2">Busca 15 Pontos</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="font-bold text-gray-800 text-lg">{simulationResult.max15?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">14 Pontos:</span>
+                          <span className="font-bold text-green-600">{simulationResult.max15?.accuracyDistribution[14] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">15 Pontos:</span>
+                          <span className="font-bold text-yellow-600">{simulationResult.max15?.accuracyDistribution[15] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                           <span className="text-gray-500 text-xs">Precisão Global:</span>
+                           <span className="font-bold text-blue-600 text-sm">
+                               {simulationResult.max15 ? ((simulationResult.max15.totalHits / (simulationResult.max15.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
                            </span>
                         </div>
                       </div>
@@ -286,34 +384,71 @@ function App() {
                 <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md" role="region" aria-label="Jogo sugerido">
                   <div className="flex justify-between items-center mb-2">
                     <p className="font-semibold">Seu palpite otimizado:</p>
-                    <button
-                      onClick={handleCopySuggested}
-                      className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
-                      aria-label="Copiar jogo sugerido"
-                      title="Copiar números"
-                    >
-                      {copied ? (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          Copiado!
-                        </>
-                      ) : (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                          </svg>
-                          Copiar
-                        </>
-                      )}
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                          onClick={handleCopyJS}
+                          className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
+                          aria-label="Copiar script para console"
+                          title="Copiar código JS para autofill"
+                        >
+                          {jsCopied ? (
+                             <span className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Script Copiado!
+                             </span>
+                          ) : (
+                             <span className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                Copiar Script
+                             </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCopySuggested}
+                          className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
+                          aria-label="Copiar jogo sugerido"
+                          title="Copiar números"
+                        >
+                          {copied ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Copiado!
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                              </svg>
+                              Copiar
+                            </>
+                          )}
+                        </button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {suggestedGame.map((num) => (
                       <LotteryBall key={num} number={num} colorClass="bg-purple-600 text-white" />
                     ))}
+                  </div>
+
+                  <div className="mb-4 p-2 bg-purple-50 rounded border border-purple-100 flex items-center justify-between">
+                     <span className="text-sm font-semibold text-purple-900">Índice de Otimização Estatística:</span>
+                     <div className="flex items-center gap-2">
+                        <div className="w-32 h-4 bg-gray-200 rounded-full overflow-hidden">
+                           <div
+                             className="h-full bg-gradient-to-r from-purple-400 to-green-500"
+                             style={{ width: `${confidence}%` }}
+                           />
+                        </div>
+                        <span className="font-bold text-purple-700">{confidence}%</span>
+                     </div>
                   </div>
 
                   {backtestResult && (
@@ -351,14 +486,29 @@ function App() {
                         </div>
                       </div>
 
-                      {backtestResult.totalPrize > 0 && (
-                        <div className="mt-4 text-center">
-                          <p className="text-sm text-yellow-800">Estimativa de prêmio total acumulado no período:</p>
-                          <p className="text-2xl font-bold text-green-700">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(backtestResult.totalPrize)}
-                          </p>
+                      <div className="mt-6 border-t border-yellow-300 pt-4">
+                        <h4 className="text-center font-bold text-yellow-900 mb-3">Análise Financeira (R$ 3,00 / aposta)</h4>
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
+                            <div className="bg-white/40 p-3 rounded border border-yellow-200">
+                                <span className="block text-xs text-yellow-800 uppercase tracking-wide">Custo Total</span>
+                                <span className="text-xl font-semibold text-red-700">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(backtestResult.totalCost)}
+                                </span>
+                            </div>
+                            <div className="bg-white/40 p-3 rounded border border-yellow-200">
+                                <span className="block text-xs text-yellow-800 uppercase tracking-wide">Retorno (Prêmios)</span>
+                                <span className="text-xl font-semibold text-green-700">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(backtestResult.totalPrize)}
+                                </span>
+                            </div>
+                            <div className={`bg-white/40 p-3 rounded border ${backtestResult.netProfit >= 0 ? 'border-green-300 bg-green-50' : 'border-red-300 bg-red-50'}`}>
+                                <span className="block text-xs text-gray-700 uppercase tracking-wide">Saldo Líquido</span>
+                                <span className={`text-xl font-bold ${backtestResult.netProfit >= 0 ? 'text-green-700' : 'text-red-700'}`}>
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(backtestResult.netProfit)}
+                                </span>
+                            </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   )}
                 </div>
