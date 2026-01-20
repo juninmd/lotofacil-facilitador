@@ -185,7 +185,7 @@ function App() {
                   <button
                     onClick={runSimulation}
                     className="flex-1 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
-                    disabled={loading || simulating || allFetchedGames.length < 50}
+                    disabled={loading || simulating || allFetchedGames.length < 20}
                   >
                     {simulating ? (
                       <>
@@ -207,32 +207,79 @@ function App() {
               </div>
 
               {simulationResult && (
-                 <div className="mb-6 p-3 bg-indigo-50 border border-indigo-200 rounded-md">
-                     <h3 className="font-semibold text-indigo-900 mb-2">Resultado da Simulação (Últimos {simulationResult.gamesSimulated} jogos)</h3>
-                     <p className="text-sm text-indigo-800 mb-2">
-                         O algoritmo tentou prever os últimos {simulationResult.gamesSimulated} resultados usando apenas dados passados.
-                     </p>
-                     <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-center">
-                         <div className="bg-white p-2 rounded shadow-sm">
-                             <div className="text-xl font-bold text-indigo-700">{simulationResult.averageHits.toFixed(2)}</div>
-                             <div className="text-xs text-gray-500">Média de Acertos</div>
-                         </div>
-                         <div className="bg-white p-2 rounded shadow-sm">
-                             <div className="text-xl font-bold text-green-600">{simulationResult.accuracyDistribution[14] || 0}</div>
-                             <div className="text-xs text-gray-500">14 Pontos</div>
-                         </div>
-                         <div className="bg-white p-2 rounded shadow-sm border border-yellow-300">
-                             <div className="text-xl font-bold text-yellow-600">{simulationResult.accuracyDistribution[15] || 0}</div>
-                             <div className="text-xs text-gray-500">15 Pontos</div>
-                         </div>
-                         <div className="bg-white p-2 rounded shadow-sm">
-                             <div className="text-xl font-bold text-blue-600">
-                                 {((simulationResult.totalHits / (simulationResult.gamesSimulated * 15)) * 100).toFixed(1)}%
-                             </div>
-                             <div className="text-xs text-gray-500">Precisão Global</div>
-                         </div>
-                     </div>
-                 </div>
+                <div className="mb-6 p-4 bg-indigo-50 border border-indigo-200 rounded-md">
+                  <h3 className="font-semibold text-indigo-900 mb-4 text-center">
+                    Comparativo de Eficiência (Últimos {simulationResult.smart.gamesSimulated} jogos)
+                  </h3>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Smart Algorithm Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
+                      <h4 className="font-bold text-purple-700 mb-3 border-b pb-2">Algoritmo Inteligente</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="font-bold text-gray-800 text-lg">{simulationResult.smart.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">14 Pontos:</span>
+                          <span className="font-bold text-green-600">{simulationResult.smart.accuracyDistribution[14] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">15 Pontos:</span>
+                          <span className="font-bold text-yellow-600">{simulationResult.smart.accuracyDistribution[15] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                           <span className="text-gray-500 text-xs">Precisão Global:</span>
+                           <span className="font-bold text-blue-600 text-sm">
+                               {((simulationResult.smart.totalHits / (simulationResult.smart.gamesSimulated * 15)) * 100).toFixed(1)}%
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Random Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-gray-400">
+                      <h4 className="font-bold text-gray-600 mb-3 border-b pb-2">Palpite Aleatório</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="font-bold text-gray-800 text-lg">{simulationResult.random.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">14 Pontos:</span>
+                          <span className="font-bold text-green-600">{simulationResult.random.accuracyDistribution[14] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">15 Pontos:</span>
+                          <span className="font-bold text-yellow-600">{simulationResult.random.accuracyDistribution[15] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                           <span className="text-gray-500 text-xs">Precisão Global:</span>
+                           <span className="font-bold text-blue-600 text-sm">
+                               {((simulationResult.random.totalHits / (simulationResult.random.gamesSimulated * 15)) * 100).toFixed(1)}%
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 text-center text-sm text-indigo-900 bg-indigo-100 p-3 rounded border border-indigo-200">
+                    {simulationResult.smart.averageHits > simulationResult.random.averageHits ? (
+                      <span>
+                        🚀 O <strong>Algoritmo Inteligente</strong> teve um desempenho{' '}
+                        <strong className="text-green-700">
+                          {((simulationResult.smart.averageHits / simulationResult.random.averageHits - 1) * 100).toFixed(1)}% superior
+                        </strong>{' '}
+                        à escolha aleatória nesta simulação.
+                      </span>
+                    ) : (
+                      <span>
+                        O algoritmo teve desempenho similar ao aleatório nesta amostra. Tente simular mais jogos para ver a tendência de longo prazo.
+                      </span>
+                    )}
+                  </div>
+                </div>
               )}
 
               {suggestedGame && (
