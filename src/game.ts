@@ -14,6 +14,9 @@ export interface LotofacilResult {
 
 const gameCache = new Map<number, Promise<LotofacilResult | null>>();
 
+// Helper for delay
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
 export const getGame = async (gameNumber?: number): Promise<LotofacilResult | null> => {
   // If a specific game number is requested and it's in the cache, return the cached promise
   if (gameNumber && gameCache.has(gameNumber)) {
@@ -88,31 +91,31 @@ export const getLatestGames = async (count: number, providedLatestGame?: Lotofac
 
   games.push(latestGame);
 
-  // Fetch previous games in batches to avoid Rate Limiting (429)
-  const batchSize = 5;
-  const delayMs = 300;
+  // Batched fetching
+  const BATCH_SIZE = 5;
+  const DELAY_MS = 200;
 
-  for (let i = 1; i < count; i += batchSize) {
-    const batchPromises: Promise<LotofacilResult | null>[] = [];
-
-    for (let j = i; j < i + batchSize && j < count; j++) {
-      const previousGameNumber = latestGame.numero - j;
-      if (previousGameNumber > 0) {
-        batchPromises.push(getGame(previousGameNumber));
-      }
+  const gameNumbersToFetch: number[] = [];
+  for (let i = 1; i < count; i++) {
+    const previousGameNumber = latestGame.numero - i;
+    if (previousGameNumber > 0) {
+      gameNumbersToFetch.push(previousGameNumber);
     }
+  }
 
-    const batchResults = await Promise.all(batchPromises);
+  for (let i = 0; i < gameNumbersToFetch.length; i += BATCH_SIZE) {
+    const batch = gameNumbersToFetch.slice(i, i + BATCH_SIZE);
+    const promises = batch.map(num => getGame(num));
 
-    batchResults.forEach(game => {
+    const results = await Promise.all(promises);
+    results.forEach(game => {
       if (game) {
         games.push(game);
       }
     });
 
-    // Add delay between batches if not the last batch
-    if (i + batchSize < count) {
-      await new Promise(resolve => setTimeout(resolve, delayMs));
+    if (i + BATCH_SIZE < gameNumbersToFetch.length) {
+      await delay(DELAY_MS);
     }
   }
 
