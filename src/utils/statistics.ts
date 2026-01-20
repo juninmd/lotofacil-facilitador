@@ -25,6 +25,11 @@ export interface SimulationResult {
     max15: SimulationStats;
 }
 
+export interface ProjectedStats {
+    averageHits: number;
+    estimatedPrize: number;
+}
+
 // Constants for Lotofacil Patterns
 const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
 const FIBONACCI = new Set([1, 2, 3, 5, 8, 13, 21]);
@@ -267,6 +272,19 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     const fibCount = numbers.filter(n => FIBONACCI.has(n)).length;
     const frameCount = numbers.filter(n => FRAME.has(n)).length;
 
+    // Strict Penalties (Soft filters)
+    // If we are way off standard Lotofacil patterns, slash the score.
+    // Standard: 7-9 odds, 180-220 sum, 8-10 repeats.
+
+    let penalty = 1.0;
+
+    // Odd Check
+    if (oddCount < 7 || oddCount > 9) penalty *= 0.7; // 30% penalty
+    if (oddCount < 6 || oddCount > 10) penalty *= 0.5; // Heavy penalty
+
+    // Sum Check
+    if (sum < 170 || sum > 230) penalty *= 0.6;
+
     // Ideal values based on Dynamic Stats
     const scoreOdd = gaussianScore(oddCount, stats.meanOdd, stats.stdDevOdd);
     const scoreSum = gaussianScore(sum, stats.meanSum, stats.stdDevSum);
@@ -278,14 +296,19 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     if (previousGameDezenas) {
         const repeatCount = numbers.filter(n => previousGameDezenas.includes(n)).length;
         scoreRepeats = gaussianScore(repeatCount, stats.meanRepeats, stats.stdDevRepeats);
+
+        // Strict Repeat Filter
+        // 8, 9, 10 are the gold standard.
+        if (repeatCount < 8 || repeatCount > 10) {
+            penalty *= 0.5; // 50% penalty for bad repeat count
+        }
     } else {
         scoreRepeats = 1; // Neutral if no prev game
     }
 
-    // Weights: Adjusted to include Fibonacci and Frame
-    // Repeats still dominant (0.45), others distributed
-    // Odd: 0.10, Sum: 0.10, Prime: 0.10, Fib: 0.10, Frame: 0.15
-    return (scoreRepeats * 0.45) + (scoreFrame * 0.15) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.10);
+    const baseScore = (scoreRepeats * 0.45) + (scoreFrame * 0.15) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.10);
+
+    return baseScore * penalty;
 };
 
 export const calculateConfidence = (game: number[], history: LotofacilResult[]): number => {
@@ -296,7 +319,7 @@ export const calculateConfidence = (game: number[], history: LotofacilResult[]):
 
     // Normalize score (theoretical max is approx 1.0)
     // We map 0.5 - 1.0 range to a percentage "confidence"
-    let confidence = (score - 0.5) * 2 * 100;
+    let confidence = (score - 0.4) * 1.66 * 100; // Adjusted normalization for stricter scoring
     if (confidence < 0) confidence = 0;
     if (confidence > 99) confidence = 99;
 
@@ -398,9 +421,10 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
       weight += normalizedFreq * 1.0;
       weight += normalizedRecent * 1.5;
 
-      // Cycle Weight: Huge boost
+      // Cycle Weight: Huge boost to close the cycle
+      // If cycle has few numbers left, they are extremely likely to drop.
       if (missingInCycle.includes(i)) {
-          weight += 4.0;
+          weight += 5.0; // Increased from 4.0
       }
 
       // Delay Weight: Boost numbers that are "due"
@@ -425,7 +449,7 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   let bestScore = -1;
 
   let attempts = 0;
-  const maxAttempts = 3000;
+  const maxAttempts = 5000; // Increased from 3000 to find better matches
 
   while (attempts < maxAttempts) {
     const selection = getWeightedRandomSubset(allNumbers, weights, quantity);
@@ -440,7 +464,7 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
     }
 
     // Stop if we find a very high probability match
-    if (bestScore > 0.96) break;
+    if (bestScore > 0.98) break; // Higher threshold
 
     attempts++;
   }
@@ -589,5 +613,29 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         smart: smartStats,
         random: randomStats,
         max15: max15Stats
+    };
+};
+
+export const calculateProjectedStats = (game: number[], history: LotofacilResult[]): ProjectedStats => {
+    // Analyze how this game would have performed in the provided history (e.g. last 100 games)
+    if (history.length === 0) return { averageHits: 0, estimatedPrize: 0 };
+
+    let totalHits = 0;
+    let totalPrize = 0;
+
+    history.forEach(historicGame => {
+        const hits = game.filter(n => historicGame.listaDezenas.includes(n)).length;
+        totalHits += hits;
+
+        if (hits === 11) totalPrize += 7.00;
+        else if (hits === 12) totalPrize += 14.00;
+        else if (hits === 13) totalPrize += 35.00;
+        else if (hits === 14) totalPrize += 1800.00; // Approx average for 14
+        else if (hits === 15) totalPrize += 2000000.00; // Approx average for 15 (share)
+    });
+
+    return {
+        averageHits: totalHits / history.length,
+        estimatedPrize: totalPrize / history.length
     };
 };
