@@ -101,6 +101,7 @@ export const getLatestGames = async (count: number, providedLatestGame?: Lotofac
     if (previousGameNumber > 0) {
       gameNumbersToFetch.push(previousGameNumber);
     }
+  }
 
   for (let i = 0; i < gameNumbersToFetch.length; i += BATCH_SIZE) {
     const batch = gameNumbersToFetch.slice(i, i + BATCH_SIZE);
