@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, generateMax15Game, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, type BacktestResult, type SimulationResult } from './utils/statistics';
+import { generateSmartGame, generateMax15Game, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -16,6 +16,7 @@ function App() {
   const [lastGameConfidence, setLastGameConfidence] = useState<number | null>(null);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
+  const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
   const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15'>('smart');
@@ -157,6 +158,10 @@ function App() {
     // Calculate Confidence
     const conf = calculateConfidence(suggested, allFetchedGames);
     setConfidence(conf);
+
+    // Calculate Projected Stats
+    const stats = calculateProjectedStats(suggested, allFetchedGames);
+    setProjectedStats(stats);
 
     // Executa o Backtest automaticamente para este jogo específico contra a história
     const result = backtestGame(suggested, allFetchedGames, quantity);
@@ -467,17 +472,36 @@ function App() {
                     ))}
                   </div>
 
-                  <div className="mb-4 p-2 bg-purple-50 rounded border border-purple-100 flex items-center justify-between">
-                     <span className="text-sm font-semibold text-purple-900">Índice de Otimização Estatística:</span>
-                     <div className="flex items-center gap-2">
-                        <div className="w-32 h-4 bg-gray-200 rounded-full overflow-hidden">
-                           <div
-                             className="h-full bg-gradient-to-r from-purple-400 to-green-500"
-                             style={{ width: `${confidence}%` }}
-                           />
+                  <div className="mb-4 space-y-2">
+                    <div className="p-2 bg-purple-50 rounded border border-purple-100 flex items-center justify-between">
+                       <span className="text-sm font-semibold text-purple-900">Probabilidade Calculada (Fit):</span>
+                       <div className="flex items-center gap-2">
+                          <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
+                             <div
+                               className="h-full bg-gradient-to-r from-purple-400 to-green-500"
+                               style={{ width: `${confidence}%` }}
+                             />
+                          </div>
+                          <span className="font-bold text-purple-700 text-sm">{confidence}%</span>
+                       </div>
+                    </div>
+
+                    {projectedStats && (
+                        <div className="flex gap-2">
+                            <div className="flex-1 p-2 bg-blue-50 rounded border border-blue-100 flex flex-col items-center">
+                                <span className="text-xs text-blue-800 uppercase font-semibold">Média Acertos</span>
+                                <span className="text-lg font-bold text-blue-900">{projectedStats.averageHits.toFixed(2)}</span>
+                                <span className="text-[10px] text-blue-600">Histórico Recente</span>
+                            </div>
+                            <div className="flex-1 p-2 bg-green-50 rounded border border-green-100 flex flex-col items-center">
+                                <span className="text-xs text-green-800 uppercase font-semibold">Estimativa Prêmio</span>
+                                <span className="text-lg font-bold text-green-900">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(projectedStats.estimatedPrize)}
+                                </span>
+                                <span className="text-[10px] text-green-600">Média por Jogo</span>
+                            </div>
                         </div>
-                        <span className="font-bold text-purple-700">{confidence}%</span>
-                     </div>
+                    )}
                   </div>
 
                   {backtestResult && (
