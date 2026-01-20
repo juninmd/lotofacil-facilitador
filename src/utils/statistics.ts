@@ -27,6 +27,9 @@ export interface SimulationResult {
 
 // Constants for Lotofacil Patterns
 const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
+const FIBONACCI = new Set([1, 2, 3, 5, 8, 13, 21]);
+// Frame (Borda) numbers: 1-5, 6, 10, 11, 15, 16, 20, 21-25
+const FRAME = new Set([1, 2, 3, 4, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23, 24, 25]);
 
 interface DynamicStats {
     meanOdd: number;
@@ -37,6 +40,10 @@ interface DynamicStats {
     stdDevPrime: number;
     meanRepeats: number;
     stdDevRepeats: number;
+    meanFib: number;
+    stdDevFib: number;
+    meanFrame: number;
+    stdDevFrame: number;
 }
 
 export const calculateStats = (games: LotofacilResult[]) => {
@@ -197,6 +204,8 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
     const sums: number[] = [];
     const primes: number[] = [];
     const repeats: number[] = [];
+    const fibs: number[] = [];
+    const frames: number[] = [];
 
     for (let i = 0; i < sample.length - 1; i++) {
         const game = sample[i];
@@ -207,6 +216,8 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
         sums.push(nums.reduce((a, b) => a + b, 0));
         primes.push(nums.filter(n => PRIMES.has(n)).length);
         repeats.push(nums.filter(n => prevGame.listaDezenas.includes(n)).length);
+        fibs.push(nums.filter(n => FIBONACCI.has(n)).length);
+        frames.push(nums.filter(n => FRAME.has(n)).length);
     }
 
     const calculateMeanStd = (values: number[]) => {
@@ -220,6 +231,8 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
     const sumStats = calculateMeanStd(sums);
     const primeStats = calculateMeanStd(primes);
     const repeatStats = calculateMeanStd(repeats);
+    const fibStats = calculateMeanStd(fibs);
+    const frameStats = calculateMeanStd(frames);
 
     return {
         meanOdd: oddStats.mean || 8,
@@ -230,6 +243,10 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
         stdDevPrime: primeStats.std || 1.2,
         meanRepeats: repeatStats.mean || 9,
         stdDevRepeats: repeatStats.std || 1.0,
+        meanFib: fibStats.mean || 4,
+        stdDevFib: fibStats.std || 1.0,
+        meanFrame: frameStats.mean || 10,
+        stdDevFrame: frameStats.std || 1.5,
     };
 };
 
@@ -237,7 +254,9 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
 // Gaussian scoring function
 const gaussianScore = (value: number, mean: number, sigma: number): number => {
     if (sigma === 0) return value === mean ? 1 : 0;
-    return Math.exp(-Math.pow(value - mean, 2) / (2 * Math.pow(sigma, 2)));
+    // Relaxed sigma for wider acceptance of "near" values
+    const relaxedSigma = sigma * 1.2;
+    return Math.exp(-Math.pow(value - mean, 2) / (2 * Math.pow(relaxedSigma, 2)));
 };
 
 // Score a candidate game based on statistical ideal distribution
@@ -245,11 +264,15 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     const oddCount = numbers.filter(n => n % 2 !== 0).length;
     const sum = numbers.reduce((a, b) => a + b, 0);
     const primesCount = numbers.filter(n => PRIMES.has(n)).length;
+    const fibCount = numbers.filter(n => FIBONACCI.has(n)).length;
+    const frameCount = numbers.filter(n => FRAME.has(n)).length;
 
     // Ideal values based on Dynamic Stats
     const scoreOdd = gaussianScore(oddCount, stats.meanOdd, stats.stdDevOdd);
     const scoreSum = gaussianScore(sum, stats.meanSum, stats.stdDevSum);
     const scorePrime = gaussianScore(primesCount, stats.meanPrime, stats.stdDevPrime);
+    const scoreFib = gaussianScore(fibCount, stats.meanFib, stats.stdDevFib);
+    const scoreFrame = gaussianScore(frameCount, stats.meanFrame, stats.stdDevFrame);
 
     let scoreRepeats = 0;
     if (previousGameDezenas) {
@@ -259,9 +282,10 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
         scoreRepeats = 1; // Neutral if no prev game
     }
 
-    // Weights: Repeats are very important in Lotofacil
-    // Optimized for 3591 pattern (which had 9 repeats, exactly the mean)
-    return (scoreOdd * 0.15) + (scoreSum * 0.15) + (scorePrime * 0.15) + (scoreRepeats * 0.55);
+    // Weights: Adjusted to include Fibonacci and Frame
+    // Repeats still dominant (0.45), others distributed
+    // Odd: 0.10, Sum: 0.10, Prime: 0.10, Fib: 0.10, Frame: 0.15
+    return (scoreRepeats * 0.45) + (scoreFrame * 0.15) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.10);
 };
 
 export const calculateConfidence = (game: number[], history: LotofacilResult[]): number => {
@@ -346,24 +370,49 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
 
   // 4. Build Weights
   const weights = new Map<number, number>();
+
+  // Exponential Decay Weighting for Frequency (Hot/Cold)
+  // Recent games have more influence.
+  const recentWeights = new Map<number, number>();
+  history.forEach((game, index) => {
+      // Index 0 is most recent.
+      const decayFactor = Math.exp(-index / 20); // Decay over ~20 games
+      game.listaDezenas.forEach(n => {
+          recentWeights.set(n, (recentWeights.get(n) || 0) + decayFactor);
+      });
+  });
+
   for (let i = 1; i <= 25; i++) {
       const freq = frequencyMap.get(i) || 0;
-      const normalizedFreq = freq / numGames;
+      const normalizedFreq = freq / numGames; // Long term freq
+
+      const recentFreq = recentWeights.get(i) || 0;
+      // Max possible recentFreq sum is approx 20. Normalize to approx 0-1 range roughly.
+      const normalizedRecent = recentFreq / 10.0;
+
       const delay = delays.get(i) || 0;
 
       let weight = 1.0;
 
-      // Frequency Weight: Up to +2.0
-      weight += normalizedFreq * 2.0;
+      // Frequency Weight: blend long term and recent "hotness"
+      weight += normalizedFreq * 1.0;
+      weight += normalizedRecent * 1.5;
 
       // Cycle Weight: Huge boost
       if (missingInCycle.includes(i)) {
-          weight += 4.0; // Increased weight for cycle
+          weight += 4.0;
       }
 
       // Delay Weight: Boost numbers that are "due"
+      // But reduce boost if number is very cold (low recent freq)
       if (delay > 2) {
-          weight += Math.log(delay) * 0.5;
+          const delayBoost = Math.log(delay) * 0.5;
+           // If it's cold, don't trust the delay as much (maybe it's dead)
+           if (normalizedRecent < 0.2) {
+               weight += delayBoost * 0.5;
+           } else {
+               weight += delayBoost;
+           }
       }
 
       weights.set(i, weight);

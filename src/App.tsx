@@ -13,6 +13,7 @@ function App() {
   const [allFetchedGames, setAllFetchedGames] = useState<LotofacilResult[]>([]);
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
   const [confidence, setConfidence] = useState<number>(0);
+  const [lastGameConfidence, setLastGameConfidence] = useState<number | null>(null);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
@@ -56,6 +57,14 @@ function App() {
               .slice(0, 10) // Top 10
               .map(([num, count]) => ({ number: num, count }));
           setDelays(sortedDelays);
+
+          // Calculate Confidence of the Latest Draw (Prediction Quality Check)
+          // We check the latest game (lastGames[0]) against the history starting from lastGames[1]
+          if (lastGames.length > 1) {
+              const historyForLast = lastGames.slice(1);
+              const lastConf = calculateConfidence(lastGames[0].listaDezenas, historyForLast);
+              setLastGameConfidence(lastConf);
+          }
         }
       } catch (err) {
         console.error("Erro ao buscar dados da Lotofácil:", err);
@@ -550,11 +559,20 @@ function App() {
                   <div className="mb-6 p-3 bg-blue-100 border border-blue-300 text-blue-800 rounded-md" role="region" aria-label="Último sorteio">
                     <h3 className="text-xl font-semibold mb-2">Último Sorteio: {latestGameResult.numero}</h3>
                     <p className="text-lg mb-2">Data: {latestGameResult.dataApuracao}</p>
-                    <div className="flex flex-wrap gap-2 justify-center">
+                    <div className="flex flex-wrap gap-2 justify-center mb-3">
                       {latestGameResult.listaDezenas.map((num) => (
                         <LotteryBall key={num} number={num} colorClass="bg-blue-600 text-white" sizeClass="w-8 h-8 text-sm" />
                       ))}
                     </div>
+                    {lastGameConfidence !== null && (
+                        <div className="text-center text-sm border-t border-blue-200 pt-2 mt-2">
+                            <span className="block text-blue-700 font-medium">Probabilidade Calculada (Smart):</span>
+                            <span className="font-bold text-lg text-blue-900">{lastGameConfidence}%</span>
+                            <span className="block text-xs text-blue-600 mt-1">
+                                (O quão "previsível" foi este resultado baseando-se no histórico anterior)
+                            </span>
+                        </div>
+                    )}
                   </div>
                 )}
             </div>
