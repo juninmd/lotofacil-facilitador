@@ -284,14 +284,26 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   const latestGame = previousGameOverride || history[0];
   const dynamicStats = getDynamicStats(history);
 
-  // 1. Calculate Frequencies
+  // 1. Calculate Frequencies (Global and Recent)
   const frequencyMap = new Map<number, number>();
-  for (let i = 1; i <= 25; i++) frequencyMap.set(i, 0);
+  const recentFrequencyMap = new Map<number, number>();
+  for (let i = 1; i <= 25; i++) {
+      frequencyMap.set(i, 0);
+      recentFrequencyMap.set(i, 0);
+  }
 
   const numGames = history.length;
   history.forEach(game => {
       game.listaDezenas.forEach(num => {
           frequencyMap.set(num, (frequencyMap.get(num) || 0) + 1);
+      });
+  });
+
+  // Recent frequency (last 10 games)
+  const recentHistory = history.slice(0, 10);
+  recentHistory.forEach(game => {
+      game.listaDezenas.forEach(num => {
+          recentFrequencyMap.set(num, (recentFrequencyMap.get(num) || 0) + 1);
       });
   });
 
@@ -306,14 +318,18 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   for (let i = 1; i <= 25; i++) {
       const freq = frequencyMap.get(i) || 0;
       const normalizedFreq = freq / numGames;
+      const recentFreq = recentFrequencyMap.get(i) || 0;
       const delay = delays.get(i) || 0;
 
       let weight = 1.0;
 
-      // Frequency Weight: Up to +2.0
-      weight += normalizedFreq * 2.0;
+      // Frequency Weight: Up to +3.0
+      weight += normalizedFreq * 3.0;
 
-      // Cycle Weight: Huge boost
+      // Recent Frequency (Hotness): Up to +4.0 (e.g. 8/10 * 5 = 4.0)
+      weight += (recentFreq / 10) * 5.0;
+
+      // Cycle Weight: Boost
       if (missingInCycle.includes(i)) {
           weight += 4.0; // Increased weight for cycle
       }
@@ -336,7 +352,17 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   const maxAttempts = 3000;
 
   while (attempts < maxAttempts) {
-    const selection = getWeightedRandomSubset(allNumbers, weights, 15);
+    // 1. Determine number of repeats (8, 9, or 10)
+    const rand = Math.random();
+    let repeatCount = 9;
+    if (rand < 0.25) repeatCount = 8;
+    else if (rand > 0.85) repeatCount = 10;
+
+    // 2. Select from pools
+    const selectionInside = getWeightedRandomSubset(insidePool, weights, repeatCount);
+    const selectionOutside = getWeightedRandomSubset(outsidePool, weights, 15 - repeatCount);
+
+    const selection = [...selectionInside, ...selectionOutside].sort((a, b) => a - b);
 
     // We score against the LATEST KNOWN game (to optimize repeats from it)
     const score = scoreCandidate(selection, dynamicStats, latestGame?.listaDezenas);
