@@ -182,7 +182,7 @@ function App() {
                   <button
                     onClick={runSimulation}
                     className="flex-1 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition duration-200 disabled:opacity-50"
-                    disabled={loading || simulating || allFetchedGames.length < 50}
+                    disabled={loading || simulating || allFetchedGames.length < 20}
                   >
                     {simulating ? 'Simulando...' : 'Validar Algoritmo (Simulação)'}
                   </button>
