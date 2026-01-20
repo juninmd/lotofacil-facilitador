@@ -23,6 +23,7 @@ function App() {
   const [searching, setSearching] = useState<boolean>(false);
   const [simulating, setSimulating] = useState<boolean>(false);
   const [copied, setCopied] = useState<boolean>(false);
+  const [jsCopied, setJsCopied] = useState<boolean>(false);
 
   const maxFrequency = mostFrequentNumbers.length > 0 ? mostFrequentNumbers[0].count : 1;
   const maxDelay = delays.length > 0 ? delays[0].count : 1;
@@ -101,6 +102,28 @@ function App() {
     }).catch(err => {
       console.error('Failed to copy: ', err);
     });
+  };
+
+  const handleCopyJS = () => {
+      if (!suggestedGame) return;
+      const jsCode = `
+(function(){
+  const nums = [${suggestedGame.join(',')}];
+  nums.forEach(n => {
+    const id = 'n' + n.toString().padStart(2, '0');
+    const el = document.getElementById(id);
+    if(el) el.click();
+  });
+})();
+      `.trim();
+
+      navigator.clipboard.writeText(jsCode).then(() => {
+          setJsCopied(true);
+          const timer = setTimeout(() => setJsCopied(false), 2000);
+          return () => clearTimeout(timer);
+      }).catch(err => {
+          console.error('Failed to copy JS: ', err);
+      });
   };
 
   const generateSuggestedGame = () => {
@@ -361,29 +384,53 @@ function App() {
                 <div className="mt-4 p-3 bg-yellow-100 border border-yellow-300 text-yellow-800 rounded-md" role="region" aria-label="Jogo sugerido">
                   <div className="flex justify-between items-center mb-2">
                     <p className="font-semibold">Seu palpite otimizado:</p>
-                    <button
-                      onClick={handleCopySuggested}
-                      className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
-                      aria-label="Copiar jogo sugerido"
-                      title="Copiar números"
-                    >
-                      {copied ? (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                          Copiado!
-                        </>
-                      ) : (
-                        <>
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
-                            <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
-                          </svg>
-                          Copiar
-                        </>
-                      )}
-                    </button>
+                    <div className="flex gap-2">
+                        <button
+                          onClick={handleCopyJS}
+                          className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
+                          aria-label="Copiar script para console"
+                          title="Copiar código JS para autofill"
+                        >
+                          {jsCopied ? (
+                             <span className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                </svg>
+                                Script Copiado!
+                             </span>
+                          ) : (
+                             <span className="flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M12.316 3.051a1 1 0 01.633 1.265l-4 12a1 1 0 11-1.898-.632l4-12a1 1 0 011.265-.633zM5.707 6.293a1 1 0 010 1.414L3.414 10l2.293 2.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0zm8.586 0a1 1 0 011.414 0l3 3a1 1 0 010 1.414l-3 3a1 1 0 11-1.414-1.414L16.586 10l-2.293-2.293a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                                Copiar Script
+                             </span>
+                          )}
+                        </button>
+                        <button
+                          onClick={handleCopySuggested}
+                          className="text-yellow-700 hover:text-yellow-900 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded p-1 transition-colors flex items-center gap-1 text-sm font-medium cursor-pointer"
+                          aria-label="Copiar jogo sugerido"
+                          title="Copiar números"
+                        >
+                          {copied ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Copiado!
+                            </>
+                          ) : (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                              </svg>
+                              Copiar
+                            </>
+                          )}
+                        </button>
+                    </div>
                   </div>
                   <div className="flex flex-wrap gap-2 mb-4">
                     {suggestedGame.map((num) => (
