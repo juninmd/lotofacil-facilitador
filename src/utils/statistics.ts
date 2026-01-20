@@ -242,7 +242,23 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     }
 
     // Weights: Repeats are very important in Lotofacil
-    return (scoreOdd * 0.2) + (scoreSum * 0.2) + (scorePrime * 0.2) + (scoreRepeats * 0.4);
+    // Optimized for 3591 pattern (which had 9 repeats, exactly the mean)
+    return (scoreOdd * 0.15) + (scoreSum * 0.15) + (scorePrime * 0.15) + (scoreRepeats * 0.55);
+};
+
+export const calculateConfidence = (game: number[], history: LotofacilResult[]): number => {
+    if (history.length === 0) return 0;
+    const stats = getDynamicStats(history);
+    const latestGame = history[0];
+    const score = scoreCandidate(game, stats, latestGame.listaDezenas);
+
+    // Normalize score (theoretical max is approx 1.0)
+    // We map 0.5 - 1.0 range to a percentage "confidence"
+    let confidence = (score - 0.5) * 2 * 100;
+    if (confidence < 0) confidence = 0;
+    if (confidence > 99) confidence = 99;
+
+    return Math.floor(confidence);
 };
 
 const getWeightedRandomSubset = (

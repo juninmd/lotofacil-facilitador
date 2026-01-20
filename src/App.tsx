@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, generateMax15Game, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, type BacktestResult, type SimulationResult } from './utils/statistics';
+import { generateSmartGame, generateMax15Game, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, type BacktestResult, type SimulationResult } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -12,6 +12,7 @@ function App() {
   const [mostFrequentNumbers, setMostFrequentNumbers] = useState<{ number: number; count: number }[]>([]);
   const [allFetchedGames, setAllFetchedGames] = useState<LotofacilResult[]>([]);
   const [suggestedGame, setSuggestedGame] = useState<number[] | null>(null);
+  const [confidence, setConfidence] = useState<number>(0);
   const [backtestResult, setBacktestResult] = useState<BacktestResult | null>(null);
   const [simulationResult, setSimulationResult] = useState<SimulationResult | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
@@ -119,6 +120,10 @@ function App() {
     }
 
     setSuggestedGame(suggested);
+
+    // Calculate Confidence
+    const conf = calculateConfidence(suggested, allFetchedGames);
+    setConfidence(conf);
 
     // Executa o Backtest automaticamente para este jogo específico contra a história
     const result = backtestGame(suggested, allFetchedGames);
@@ -384,6 +389,19 @@ function App() {
                     {suggestedGame.map((num) => (
                       <LotteryBall key={num} number={num} colorClass="bg-purple-600 text-white" />
                     ))}
+                  </div>
+
+                  <div className="mb-4 p-2 bg-purple-50 rounded border border-purple-100 flex items-center justify-between">
+                     <span className="text-sm font-semibold text-purple-900">Índice de Otimização Estatística:</span>
+                     <div className="flex items-center gap-2">
+                        <div className="w-32 h-4 bg-gray-200 rounded-full overflow-hidden">
+                           <div
+                             className="h-full bg-gradient-to-r from-purple-400 to-green-500"
+                             style={{ width: `${confidence}%` }}
+                           />
+                        </div>
+                        <span className="font-bold text-purple-700">{confidence}%</span>
+                     </div>
                   </div>
 
                   {backtestResult && (
