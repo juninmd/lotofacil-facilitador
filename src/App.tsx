@@ -18,6 +18,7 @@ function App() {
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
   const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15'>('smart');
+  const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [searching, setSearching] = useState<boolean>(false);
@@ -136,10 +137,10 @@ function App() {
     let suggested: number[];
 
     if (algorithmType === 'max15') {
-       suggested = generateMax15Game(allFetchedGames);
+       suggested = generateMax15Game(allFetchedGames, quantity);
     } else {
        // Utiliza o novo algoritmo "Smart"
-       suggested = generateSmartGame(allFetchedGames);
+       suggested = generateSmartGame(allFetchedGames, undefined, quantity);
     }
 
     setSuggestedGame(suggested);
@@ -149,7 +150,7 @@ function App() {
     setConfidence(conf);
 
     // Executa o Backtest automaticamente para este jogo específico contra a história
-    const result = backtestGame(suggested, allFetchedGames);
+    const result = backtestGame(suggested, allFetchedGames, quantity);
     setBacktestResult(result);
   };
 
@@ -241,6 +242,25 @@ function App() {
                         Estratégia fixa: 9 repetidos do último jogo + 6 ausentes mais atrasados. Foca no padrão mais comum dos 15 pontos.
                     </p>
                  </label>
+              </div>
+
+              <div className="mb-6">
+                 <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade de Números na Aposta</label>
+                 <div className="flex flex-wrap gap-2">
+                    {[15, 16, 17, 18, 19, 20].map(q => {
+                        const prices: Record<number, string> = { 15: "R$ 3,50", 16: "R$ 56,00", 17: "R$ 476,00", 18: "R$ 2.856,00", 19: "R$ 13.566,00", 20: "R$ 38.760,00" };
+                        return (
+                            <button
+                                key={q}
+                                onClick={() => setQuantity(q)}
+                                className={`px-4 py-2 rounded border transition-colors ${quantity === q ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                            >
+                                <span className="font-bold">{q}</span>
+                                <span className="block text-xs font-normal opacity-80">{prices[q]}</span>
+                            </button>
+                        );
+                    })}
+                 </div>
               </div>
 
               <div className="flex gap-4 mb-4 flex-wrap">
@@ -487,7 +507,12 @@ function App() {
                       </div>
 
                       <div className="mt-6 border-t border-yellow-300 pt-4">
-                        <h4 className="text-center font-bold text-yellow-900 mb-3">Análise Financeira (R$ 3,00 / aposta)</h4>
+                        <h4 className="text-center font-bold text-yellow-900 mb-3">
+                            Análise Financeira
+                            <span className="block text-sm font-normal text-yellow-800 mt-1">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(backtestResult.totalCost / backtestResult.totalGames)} / aposta
+                            </span>
+                        </h4>
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-center">
                             <div className="bg-white/40 p-3 rounded border border-yellow-200">
                                 <span className="block text-xs text-yellow-800 uppercase tracking-wide">Custo Total</span>

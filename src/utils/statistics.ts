@@ -101,7 +101,7 @@ export const calculateDelays = (history: LotofacilResult[]): Map<number, number>
   return delays;
 };
 
-export const backtestGame = (selection: number[], history: LotofacilResult[]): BacktestResult => {
+export const backtestGame = (selection: number[], history: LotofacilResult[], betSize?: number): BacktestResult => {
   const result: BacktestResult = {
     11: 0,
     12: 0,
@@ -115,6 +115,7 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
   };
 
   const selectionSet = new Set(selection);
+  const quantity = betSize || selection.length;
 
   history.forEach(game => {
     let hits = 0;
@@ -125,21 +126,38 @@ export const backtestGame = (selection: number[], history: LotofacilResult[]): B
     if (hits >= 11 && hits <= 15) {
       result[hits as 11 | 12 | 13 | 14 | 15]++;
 
-      // Calculate prize
-      // Faixa 1 = 15 hits, Faixa 2 = 14 hits, ..., Faixa 5 = 11 hits
-      const targetFaixa = 16 - hits;
-
-      if (game.listaRateioPremio) {
-        const premio = game.listaRateioPremio.find(p => p.faixa === targetFaixa);
-        if (premio) {
-          result.totalPrize += premio.valorPremio;
+      // Fixed prizes for 11, 12, 13 hits based on user input
+      if (hits === 11) {
+        result.totalPrize += 7.00;
+      } else if (hits === 12) {
+        result.totalPrize += 14.00;
+      } else if (hits === 13) {
+        result.totalPrize += 35.00;
+      } else {
+        // Faixa 1 = 15 hits, Faixa 2 = 14 hits
+        const targetFaixa = 16 - hits;
+        if (game.listaRateioPremio) {
+          const premio = game.listaRateioPremio.find(p => p.faixa === targetFaixa);
+          if (premio) {
+            result.totalPrize += premio.valorPremio;
+          }
         }
       }
     }
   });
 
-  // Calculate Costs and Profit (Price per game R$ 3,00)
-  result.totalCost = result.totalGames * 3.00;
+  // Calculate Costs
+  const prices: {[key: number]: number} = {
+    15: 3.50,
+    16: 56.00,
+    17: 476.00,
+    18: 2856.00,
+    19: 13566.00,
+    20: 38760.00
+  };
+  const costPerGame = prices[quantity] || 3.50;
+
+  result.totalCost = result.totalGames * costPerGame;
   result.netProfit = result.totalPrize - result.totalCost;
 
   return result;
@@ -303,7 +321,7 @@ const getWeightedRandomSubset = (
 };
 
 
-export const generateSmartGame = (history: LotofacilResult[], previousGameOverride?: LotofacilResult): number[] => {
+export const generateSmartGame = (history: LotofacilResult[], previousGameOverride?: LotofacilResult, quantity: number = 15): number[] => {
   if (history.length === 0) return [];
 
   const latestGame = previousGameOverride || history[0];
@@ -361,7 +379,7 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   const maxAttempts = 3000;
 
   while (attempts < maxAttempts) {
-    const selection = getWeightedRandomSubset(allNumbers, weights, 15);
+    const selection = getWeightedRandomSubset(allNumbers, weights, quantity);
 
     // We score against the LATEST KNOWN game (to optimize repeats from it)
     const score = scoreCandidate(selection, dynamicStats, latestGame?.listaDezenas);
@@ -378,13 +396,13 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
     attempts++;
   }
 
-  return bestCandidate.length > 0 ? bestCandidate : allNumbers.slice(0, 15);
+  return bestCandidate.length > 0 ? bestCandidate : allNumbers.slice(0, quantity);
 };
 
-export const generateRandomGame = (): number[] => {
+export const generateRandomGame = (quantity: number = 15): number[] => {
     const allNumbers = Array.from({ length: 25 }, (_, i) => i + 1);
     const selection: number[] = [];
-    while (selection.length < 15) {
+    while (selection.length < quantity) {
         const idx = Math.floor(Math.random() * allNumbers.length);
         selection.push(allNumbers[idx]);
         allNumbers.splice(idx, 1);
@@ -392,7 +410,7 @@ export const generateRandomGame = (): number[] => {
     return selection.sort((a, b) => a - b);
 }
 
-export const generateMax15Game = (history: LotofacilResult[]): number[] => {
+export const generateMax15Game = (history: LotofacilResult[], quantity: number = 15): number[] => {
   if (history.length === 0) return [];
   const latestGame = history[0];
   const previousNumbers = new Set(latestGame.listaDezenas);
@@ -418,25 +436,29 @@ export const generateMax15Game = (history: LotofacilResult[]): number[] => {
   const sortedPrevious = [...previousNumbers].sort((a, b) => scoreNumber(b, false) - scoreNumber(a, false));
   const sortedAbsent = [...absentNumbers].sort((a, b) => scoreNumber(b, true) - scoreNumber(a, true));
 
-  // We need 9 from previous, 6 from absent.
-  // We will take top 12 from previous and top 8 from absent as a "pool" to randomize slightly for validation
-  const poolPrevious = sortedPrevious.slice(0, 12);
-  const poolAbsent = sortedAbsent.slice(0, 8);
+  // Determine ratio based on quantity. Default 9/6 for 15.
+  // Ratio is approx 60% from previous.
+  const targetPrevious = Math.round(quantity * 0.6);
+  const targetAbsent = quantity - targetPrevious;
+
+  // We take a slightly larger pool to randomize from
+  const poolPrevious = sortedPrevious.slice(0, targetPrevious + 4);
+  const poolAbsent = sortedAbsent.slice(0, targetAbsent + 3);
 
   let bestGame: number[] = [];
   let bestScore = -1;
 
   for(let i=0; i<500; i++) {
-      // Pick 9 from poolPrevious
+      // Pick numbers from poolPrevious
       const p = new Set<number>();
-      while(p.size < 9) {
+      while(p.size < targetPrevious) {
           const idx = Math.floor(Math.random() * poolPrevious.length);
           p.add(poolPrevious[idx]);
       }
 
-      // Pick 6 from poolAbsent
+      // Pick numbers from poolAbsent
       const a = new Set<number>();
-      while(a.size < 6) {
+      while(a.size < targetAbsent) {
           const idx = Math.floor(Math.random() * poolAbsent.length);
           a.add(poolAbsent[idx]);
       }
