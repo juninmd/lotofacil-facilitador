@@ -188,9 +188,9 @@ function App() {
       <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-6xl"> {/* Increased max-w */}
         <h1 className="text-4xl font-bold text-center text-blue-700 mb-6">Lotofácil Facilitador</h1>
 
-        {loading && <p className="text-center text-blue-600 mb-4">Carregando dados da Lotofácil...</p>}
+        {loading && <p className="text-center text-blue-600 mb-4" role="status">Carregando dados da Lotofácil...</p>}
         {error && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-300 text-red-800 rounded-md text-center">
+          <div className="mt-4 p-3 bg-red-100 border border-red-300 text-red-800 rounded-md text-center" role="alert">
             <p>{error}</p>
           </div>
         )}
@@ -259,14 +259,17 @@ function App() {
               </div>
 
               <div className="mb-6">
-                 <label className="block text-sm font-medium text-gray-700 mb-2">Quantidade de Números na Aposta</label>
-                 <div className="flex flex-wrap gap-2">
+                 <label id="quantity-label" className="block text-sm font-medium text-gray-700 mb-2">Quantidade de Números na Aposta</label>
+                 <div className="flex flex-wrap gap-2" role="group" aria-labelledby="quantity-label">
                     {[15, 16, 17, 18, 19, 20].map(q => {
                         const prices: Record<number, string> = { 15: "R$ 3,50", 16: "R$ 56,00", 17: "R$ 476,00", 18: "R$ 2.856,00", 19: "R$ 13.566,00", 20: "R$ 38.760,00" };
                         return (
                             <button
                                 key={q}
+                                type="button"
                                 onClick={() => setQuantity(q)}
+                                aria-pressed={quantity === q}
+                                aria-label={`${q} números, valor ${prices[q]}`}
                                 className={`px-4 py-2 rounded border transition-colors ${quantity === q ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                             >
                                 <span className="font-bold">{q}</span>

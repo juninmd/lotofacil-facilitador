@@ -13,3 +13,7 @@
 ## 2026-01-22 - [Action Button Cues]
 **Learning:** Adding icon cues and distinct loading spinners to primary action buttons significantly improves user confidence in complex operations (like AI generation/simulation).
 **Action:** Ensure all async or complex action buttons have both a representative icon and a distinct loading state.
+
+## 2026-01-28 - [Accessible Toggle Groups]
+**Learning:** Using `aria-pressed` on a group of buttons is a lightweight, accessible alternative to radio inputs for "pick one" UI patterns, preserving existing styles while informing screen readers.
+**Action:** When using buttons for selection, wrap them in a container with `role="group"` and proper labeling, and use `aria-pressed` to indicate the active state.
