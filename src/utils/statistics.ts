@@ -23,6 +23,7 @@ export interface SimulationResult {
     smart: SimulationStats;
     random: SimulationStats;
     max15: SimulationStats;
+    knn: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -696,17 +697,81 @@ export const generateMax15Game = (history: LotofacilResult[], quantity: number =
   return bestGame;
 };
 
+// K-Nearest Neighbors (KNN) Pattern Matcher
+export const generateKNNGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
+    if (history.length < 20) return generateSmartGame(history, undefined, quantity); // Fallback
+
+    const targetGame = history[0]; // The latest game to match against
+
+    // Store "followers" - numbers that appeared in the game *immediately after* a similar game
+    const followerCounts = new Map<number, number>();
+    let similarGamesCount = 0;
+
+    // 1. Find Similar Games
+    // We look for games that shared at least 11 numbers with the target game
+    // We iterate starting from index 1 (Previous game) to end-1.
+    for (let i = 1; i < history.length - 1; i++) {
+        const historicGame = history[i];
+
+        // Calculate similarity with target (latest game)
+        let matches = 0;
+        historicGame.listaDezenas.forEach(n => {
+            if (targetGame.listaDezenas.includes(n)) matches++;
+        });
+
+        // Threshold for "Similarity": 11 hits is usually good enough for Lotofacil patterns
+        if (matches >= 11) {
+            similarGamesCount++;
+            const followerGame = history[i-1]; // The game that came *after* this historic match
+            followerGame.listaDezenas.forEach(n => {
+                followerCounts.set(n, (followerCounts.get(n) || 0) + 1);
+            });
+        }
+    }
+
+    // If we didn't find enough matches, lower the threshold or fallback
+    if (similarGamesCount < 3) {
+         // Fallback to Smart if no pattern found
+         return generateSmartGame(history, undefined, quantity);
+    }
+
+    // 2. Select Top Numbers from Followers
+    const sortedFollowers = Array.from(followerCounts.entries())
+        .sort((a, b) => b[1] - a[1]); // Descending frequency
+
+    const selection = new Set<number>();
+
+    // Add numbers based on frequency in "next" games
+    for (const [num] of sortedFollowers) {
+        if (selection.size >= quantity) break;
+        selection.add(num);
+    }
+
+    // Fill remaining if needed (using Smart Logic for remaining slots)
+    if (selection.size < quantity) {
+        const smartFallback = generateSmartGame(history, undefined, quantity);
+        for (const num of smartFallback) {
+             if (selection.size >= quantity) break;
+             selection.add(num);
+        }
+    }
+
+    return Array.from(selection).sort((a, b) => a - b);
+};
+
+
 export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations: number = 20): SimulationResult => {
     // We need training data (past games) for each simulation step
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const randomStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const max15Stats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const knnStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -729,6 +794,12 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         max15Stats.totalHits += max15Hits;
         max15Stats.accuracyDistribution[max15Hits] = (max15Stats.accuracyDistribution[max15Hits] || 0) + 1;
 
+        // KNN Prediction
+        const knnPrediction = generateKNNGame(trainingData);
+        const knnHits = knnPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        knnStats.totalHits += knnHits;
+        knnStats.accuracyDistribution[knnHits] = (knnStats.accuracyDistribution[knnHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -738,16 +809,23 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         smartStats.gamesSimulated++;
         randomStats.gamesSimulated++;
         max15Stats.gamesSimulated++;
+        knnStats.gamesSimulated++;
     }
 
-    if (smartStats.gamesSimulated > 0) smartStats.averageHits = smartStats.totalHits / smartStats.gamesSimulated;
-    if (randomStats.gamesSimulated > 0) randomStats.averageHits = randomStats.totalHits / randomStats.gamesSimulated;
-    if (max15Stats.gamesSimulated > 0) max15Stats.averageHits = max15Stats.totalHits / max15Stats.gamesSimulated;
+    const calcAvg = (stats: SimulationStats) => {
+        if (stats.gamesSimulated > 0) stats.averageHits = stats.totalHits / stats.gamesSimulated;
+    };
+
+    calcAvg(smartStats);
+    calcAvg(randomStats);
+    calcAvg(max15Stats);
+    calcAvg(knnStats);
 
     return {
         smart: smartStats,
         random: randomStats,
-        max15: max15Stats
+        max15: max15Stats,
+        knn: knnStats
     };
 };
 

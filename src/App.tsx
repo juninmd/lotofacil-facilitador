@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, generateMax15Game, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
+import { generateSmartGame, generateMax15Game, generateKNNGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -19,7 +19,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -148,6 +148,8 @@ function App() {
 
     if (algorithmType === 'max15') {
        suggested = generateMax15Game(allFetchedGames, quantity);
+    } else if (algorithmType === 'knn') {
+       suggested = generateKNNGame(allFetchedGames, quantity);
     } else {
        // Utiliza o novo algoritmo "Smart"
        suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -256,6 +258,23 @@ function App() {
                         Estratégia fixa: 9 repetidos do último jogo + 6 ausentes mais atrasados. Foca no padrão mais comum dos 15 pontos.
                     </p>
                  </label>
+
+                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="algorithm"
+                            value="knn"
+                            checked={algorithmType === 'knn'}
+                            onChange={() => setAlgorithmType('knn')}
+                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                        />
+                        <span className="font-semibold text-gray-800">Padrão Recorrente (IA)</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 ml-6">
+                        Analisa concursos passados similares ao atual e busca o que aconteceu em seguida (K-Nearest Neighbors).
+                    </p>
+                 </label>
               </div>
 
               <div className="mb-6">
@@ -322,7 +341,7 @@ function App() {
                     Comparativo de Eficiência (Últimos {simulationResult.smart.gamesSimulated} jogos)
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     {/* Smart Algorithm Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
                       <h4 className="font-bold text-purple-700 mb-3 border-b pb-2">Algoritmo Inteligente</h4>
@@ -368,6 +387,31 @@ function App() {
                            <span className="text-gray-500 text-xs">Precisão Global:</span>
                            <span className="font-bold text-blue-600 text-sm">
                                {simulationResult.max15 ? ((simulationResult.max15.totalHits / (simulationResult.max15.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* KNN Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-pink-600">
+                      <h4 className="font-bold text-pink-700 mb-3 border-b pb-2">Padrão Recorrente (IA)</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="font-bold text-gray-800 text-lg">{simulationResult.knn?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">14 Pontos:</span>
+                          <span className="font-bold text-green-600">{simulationResult.knn?.accuracyDistribution[14] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">15 Pontos:</span>
+                          <span className="font-bold text-yellow-600">{simulationResult.knn?.accuracyDistribution[15] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                           <span className="text-gray-500 text-xs">Precisão Global:</span>
+                           <span className="font-bold text-blue-600 text-sm">
+                               {simulationResult.knn ? ((simulationResult.knn.totalHits / (simulationResult.knn.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
                            </span>
                         </div>
                       </div>
