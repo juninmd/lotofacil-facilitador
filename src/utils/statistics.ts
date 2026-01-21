@@ -49,7 +49,35 @@ interface DynamicStats {
     stdDevFib: number;
     meanFrame: number;
     stdDevFrame: number;
+    meanLineStdDev: number;
+    stdDevLineStdDev: number;
+    meanColStdDev: number;
+    stdDevColStdDev: number;
 }
+
+const calculateArrayStdDev = (values: number[]): number => {
+    if (values.length === 0) return 0;
+    const mean = values.reduce((a, b) => a + b, 0) / values.length;
+    const variance = values.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / values.length;
+    return Math.sqrt(variance);
+};
+
+const getGridDistribution = (numbers: number[]) => {
+    // 5x5 Grid
+    // Lines: 1-5, 6-10, ...
+    // Cols: 1,6,11..
+    const lines = [0, 0, 0, 0, 0];
+    const cols = [0, 0, 0, 0, 0];
+
+    numbers.forEach(n => {
+        const lineIdx = Math.ceil(n / 5) - 1;
+        const colIdx = (n - 1) % 5;
+        if (lineIdx >= 0 && lineIdx < 5) lines[lineIdx]++;
+        if (colIdx >= 0 && colIdx < 5) cols[colIdx]++;
+    });
+
+    return { lines, cols };
+};
 
 export const calculateStats = (games: LotofacilResult[]) => {
   const frequencyMap = new Map<number, number>();
@@ -211,6 +239,8 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
     const repeats: number[] = [];
     const fibs: number[] = [];
     const frames: number[] = [];
+    const lineStdDevs: number[] = [];
+    const colStdDevs: number[] = [];
 
     for (let i = 0; i < sample.length - 1; i++) {
         const game = sample[i];
@@ -223,6 +253,10 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
         repeats.push(nums.filter(n => prevGame.listaDezenas.includes(n)).length);
         fibs.push(nums.filter(n => FIBONACCI.has(n)).length);
         frames.push(nums.filter(n => FRAME.has(n)).length);
+
+        const { lines, cols } = getGridDistribution(nums);
+        lineStdDevs.push(calculateArrayStdDev(lines));
+        colStdDevs.push(calculateArrayStdDev(cols));
     }
 
     const calculateMeanStd = (values: number[]) => {
@@ -238,6 +272,8 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
     const repeatStats = calculateMeanStd(repeats);
     const fibStats = calculateMeanStd(fibs);
     const frameStats = calculateMeanStd(frames);
+    const lineStats = calculateMeanStd(lineStdDevs);
+    const colStats = calculateMeanStd(colStdDevs);
 
     return {
         meanOdd: oddStats.mean || 8,
@@ -252,6 +288,10 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
         stdDevFib: fibStats.std || 1.0,
         meanFrame: frameStats.mean || 10,
         stdDevFrame: frameStats.std || 1.5,
+        meanLineStdDev: lineStats.mean || 1.0,
+        stdDevLineStdDev: lineStats.std || 0.3,
+        meanColStdDev: colStats.mean || 1.0,
+        stdDevColStdDev: colStats.std || 0.3,
     };
 };
 
@@ -271,6 +311,10 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     const primesCount = numbers.filter(n => PRIMES.has(n)).length;
     const fibCount = numbers.filter(n => FIBONACCI.has(n)).length;
     const frameCount = numbers.filter(n => FRAME.has(n)).length;
+
+    const { lines, cols } = getGridDistribution(numbers);
+    const lineStdDev = calculateArrayStdDev(lines);
+    const colStdDev = calculateArrayStdDev(cols);
 
     // Strict Penalties (Soft filters)
     // If we are way off standard Lotofacil patterns, slash the score.
@@ -292,6 +336,9 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     const scoreFib = gaussianScore(fibCount, stats.meanFib, stats.stdDevFib);
     const scoreFrame = gaussianScore(frameCount, stats.meanFrame, stats.stdDevFrame);
 
+    const scoreLine = gaussianScore(lineStdDev, stats.meanLineStdDev, stats.stdDevLineStdDev);
+    const scoreCol = gaussianScore(colStdDev, stats.meanColStdDev, stats.stdDevColStdDev);
+
     let scoreRepeats = 0;
     if (previousGameDezenas) {
         const repeatCount = numbers.filter(n => previousGameDezenas.includes(n)).length;
@@ -306,7 +353,7 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
         scoreRepeats = 1; // Neutral if no prev game
     }
 
-    const baseScore = (scoreRepeats * 0.45) + (scoreFrame * 0.15) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.10);
+    const baseScore = (scoreRepeats * 0.35) + (scoreFrame * 0.10) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.05) + (scoreLine * 0.10) + (scoreCol * 0.10);
 
     return baseScore * penalty;
 };
@@ -365,6 +412,48 @@ const getWeightedRandomSubset = (
   }
 
   return Array.from(selection).sort((a, b) => a - b);
+};
+
+const optimizeGame = (
+    candidate: number[],
+    weights: Map<number, number>,
+    stats: DynamicStats,
+    latestGameDezenas?: number[]
+): number[] => {
+    let bestSet = [...candidate];
+    let bestScore = scoreCandidate(bestSet, stats, latestGameDezenas);
+    const allNumbers = Array.from({ length: 25 }, (_, i) => i + 1);
+
+    // Hill Climbing Optimization
+    // Try to swap a number in the set with a number outside the set
+    for (let i = 0; i < 100; i++) {
+        const currentSet = new Set(bestSet);
+        const outside = allNumbers.filter(n => !currentSet.has(n));
+
+        // Pick a number to remove (inverse weight - remove "weak" numbers)
+        // Or just random for exploration
+        const toRemoveIdx = Math.floor(Math.random() * bestSet.length);
+        const toRemove = bestSet[toRemoveIdx];
+
+        // Pick a number to add (weighted - add "strong" numbers)
+        // Or just random
+        const toAddIdx = Math.floor(Math.random() * outside.length);
+        const toAdd = outside[toAddIdx];
+
+        // Perform Swap
+        const newSet = [...bestSet];
+        newSet[toRemoveIdx] = toAdd;
+        newSet.sort((a, b) => a - b);
+
+        const newScore = scoreCandidate(newSet, stats, latestGameDezenas);
+
+        if (newScore > bestScore) {
+            bestScore = newScore;
+            bestSet = newSet;
+        }
+    }
+
+    return bestSet;
 };
 
 
@@ -467,6 +556,11 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
     if (bestScore > 0.98) break; // Higher threshold
 
     attempts++;
+  }
+
+  // Final Refinement Step
+  if (bestCandidate.length > 0) {
+      bestCandidate = optimizeGame(bestCandidate, weights, dynamicStats, latestGame?.listaDezenas);
   }
 
   return bestCandidate.length > 0 ? bestCandidate : allNumbers.slice(0, quantity);
