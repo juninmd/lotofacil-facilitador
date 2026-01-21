@@ -416,7 +416,6 @@ const getWeightedRandomSubset = (
 
 const optimizeGame = (
     candidate: number[],
-    weights: Map<number, number>,
     stats: DynamicStats,
     latestGameDezenas?: number[]
 ): number[] => {
@@ -433,7 +432,6 @@ const optimizeGame = (
         // Pick a number to remove (inverse weight - remove "weak" numbers)
         // Or just random for exploration
         const toRemoveIdx = Math.floor(Math.random() * bestSet.length);
-        const toRemove = bestSet[toRemoveIdx];
 
         // Pick a number to add (weighted - add "strong" numbers)
         // Or just random
@@ -560,7 +558,7 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
 
   // Final Refinement Step
   if (bestCandidate.length > 0) {
-      bestCandidate = optimizeGame(bestCandidate, weights, dynamicStats, latestGame?.listaDezenas);
+      bestCandidate = optimizeGame(bestCandidate, dynamicStats, latestGame?.listaDezenas);
   }
 
   return bestCandidate.length > 0 ? bestCandidate : allNumbers.slice(0, quantity);
