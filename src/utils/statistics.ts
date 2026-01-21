@@ -79,6 +79,39 @@ const getGridDistribution = (numbers: number[]) => {
     return { lines, cols };
 };
 
+const getMaxSequence = (numbers: number[]) => {
+    let maxSeq = 1;
+    let currentSeq = 1;
+    for (let i = 0; i < numbers.length - 1; i++) {
+        if (numbers[i+1] === numbers[i] + 1) {
+            currentSeq++;
+        } else {
+            if (currentSeq > maxSeq) maxSeq = currentSeq;
+            currentSeq = 1;
+        }
+    }
+    if (currentSeq > maxSeq) maxSeq = currentSeq;
+    return maxSeq;
+};
+
+const checkSpread = (numbers: number[]) => {
+    // 1. Check for Giant Gaps (>= 6)
+    for (let i = 0; i < numbers.length - 1; i++) {
+        if (numbers[i+1] - numbers[i] >= 6) return false;
+    }
+
+    // 2. Visual Distribution Regions
+    // Start (1-10), Middle (11-15), End (16-25)
+    // We expect at least *some* numbers in each region to avoid "holes"
+    const startCount = numbers.filter(n => n <= 10).length;
+    const midCount = numbers.filter(n => n >= 11 && n <= 15).length;
+    const endCount = numbers.filter(n => n >= 16).length;
+
+    if (startCount < 2 || midCount < 1 || endCount < 2) return false;
+
+    return true;
+};
+
 export const calculateStats = (games: LotofacilResult[]) => {
   const frequencyMap = new Map<number, number>();
   let totalSum = 0;
@@ -316,18 +349,16 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     const lineStdDev = calculateArrayStdDev(lines);
     const colStdDev = calculateArrayStdDev(cols);
 
-    // Strict Penalties (Soft filters)
-    // If we are way off standard Lotofacil patterns, slash the score.
-    // Standard: 7-9 odds, 180-220 sum, 8-10 repeats.
+    const maxSequence = getMaxSequence(numbers);
+    const isSpreadValid = checkSpread(numbers);
 
-    let penalty = 1.0;
-
-    // Odd Check
-    if (oddCount < 7 || oddCount > 9) penalty *= 0.7; // 30% penalty
-    if (oddCount < 6 || oddCount > 10) penalty *= 0.5; // Heavy penalty
-
-    // Sum Check
-    if (sum < 170 || sum > 230) penalty *= 0.6;
+    // Hard Constraints (Mandatory)
+    if (sum < 180 || sum > 210) return 0.0001; // Invalid
+    if (oddCount !== 8 && oddCount !== 9) return 0.0001; // Invalid
+    if (primesCount < 4 || primesCount > 6) return 0.0001; // Invalid
+    if (frameCount < 9 || frameCount > 10) return 0.0001; // Invalid
+    if (maxSequence > 3) return 0.0001; // Invalid
+    if (!isSpreadValid) return 0.0001; // Invalid
 
     // Ideal values based on Dynamic Stats
     const scoreOdd = gaussianScore(oddCount, stats.meanOdd, stats.stdDevOdd);
@@ -347,7 +378,7 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
         // Strict Repeat Filter
         // 8, 9, 10 are the gold standard.
         if (repeatCount < 8 || repeatCount > 10) {
-            penalty *= 0.5; // 50% penalty for bad repeat count
+            scoreRepeats *= 0.5; // 50% penalty for bad repeat count
         }
     } else {
         scoreRepeats = 1; // Neutral if no prev game
@@ -355,7 +386,7 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
 
     const baseScore = (scoreRepeats * 0.35) + (scoreFrame * 0.10) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.05) + (scoreLine * 0.10) + (scoreCol * 0.10);
 
-    return baseScore * penalty;
+    return baseScore;
 };
 
 export const calculateConfidence = (game: number[], history: LotofacilResult[]): number => {
