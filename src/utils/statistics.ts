@@ -316,7 +316,7 @@ const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
         meanPrime: primeStats.mean || 5,
         stdDevPrime: primeStats.std || 1.2,
         meanRepeats: repeatStats.mean || 9,
-        stdDevRepeats: repeatStats.std || 1.0,
+        stdDevRepeats: Math.max(repeatStats.std || 1.0, 1.5), // Widen repeat acceptance
         meanFib: fibStats.mean || 4,
         stdDevFib: fibStats.std || 1.0,
         meanFrame: frameStats.mean || 10,
@@ -357,7 +357,7 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
     if (oddCount !== 8 && oddCount !== 9) return 0.0001; // Invalid
     if (primesCount < 4 || primesCount > 6) return 0.0001; // Invalid
     if (frameCount < 9 || frameCount > 10) return 0.0001; // Invalid
-    if (maxSequence > 3) return 0.0001; // Invalid
+    if (maxSequence > 4) return 0.0001; // Invalid
     if (!isSpreadValid) return 0.0001; // Invalid
 
     // Ideal values based on Dynamic Stats
@@ -384,7 +384,7 @@ const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDeze
         scoreRepeats = 1; // Neutral if no prev game
     }
 
-    const baseScore = (scoreRepeats * 0.35) + (scoreFrame * 0.10) + (scoreOdd * 0.10) + (scoreSum * 0.10) + (scorePrime * 0.10) + (scoreFib * 0.05) + (scoreLine * 0.10) + (scoreCol * 0.10);
+    const baseScore = (scoreRepeats * 0.50) + (scoreFrame * 0.10) + (scoreOdd * 0.10) + (scoreSum * 0.05) + (scorePrime * 0.05) + (scoreFib * 0.05) + (scoreLine * 0.075) + (scoreCol * 0.075);
 
     return baseScore;
 };
@@ -456,7 +456,7 @@ const optimizeGame = (
 
     // Hill Climbing Optimization
     // Try to swap a number in the set with a number outside the set
-    for (let i = 0; i < 100; i++) {
+    for (let i = 0; i < 1000; i++) {
         const currentSet = new Set(bestSet);
         const outside = allNumbers.filter(n => !currentSet.has(n));
 
@@ -536,13 +536,19 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
       let weight = 1.0;
 
       // Frequency Weight: blend long term and recent "hotness"
-      weight += normalizedFreq * 1.0;
-      weight += normalizedRecent * 1.5;
+      weight += normalizedFreq * 1.2;
+      weight += normalizedRecent * 1.0;
+
+      // "Overheating" Penalty: If a number is too hot (high recent freq), it might be due for a break.
+      // normalizedRecent is approx 0-2.0. If > 1.35, it's very hot.
+      if (normalizedRecent > 1.35) {
+          weight *= 0.4; // Penalize hot numbers to predict cooling
+      }
 
       // Cycle Weight: Huge boost to close the cycle
       // If cycle has few numbers left, they are extremely likely to drop.
       if (missingInCycle.includes(i)) {
-          weight += 5.0; // Increased from 4.0
+          weight += 10.0; // Guarantee selection
       }
 
       // Delay Weight: Boost numbers that are "due"
@@ -563,36 +569,42 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   const allNumbers = Array.from({ length: 25 }, (_, i) => i + 1);
 
   // Generate Multiple Candidates and Rank Them
-  let bestCandidate: number[] = [];
-  let bestScore = -1;
+  const topCandidates: { candidate: number[], score: number }[] = [];
+  const maxAttempts = 5000;
 
-  let attempts = 0;
-  const maxAttempts = 5000; // Increased from 3000 to find better matches
-
-  while (attempts < maxAttempts) {
+  for (let i = 0; i < maxAttempts; i++) {
     const selection = getWeightedRandomSubset(allNumbers, weights, quantity);
-
-    // We score against the LATEST KNOWN game (to optimize repeats from it)
     const score = scoreCandidate(selection, dynamicStats, latestGame?.listaDezenas);
 
-    // Optimization: Keep the best score
-    if (score > bestScore) {
-        bestScore = score;
-        bestCandidate = selection;
+    // Keep top 10 candidates
+    if (topCandidates.length < 10) {
+        topCandidates.push({ candidate: selection, score });
+        topCandidates.sort((a, b) => b.score - a.score);
+    } else if (score > topCandidates[topCandidates.length - 1].score) {
+        topCandidates.pop();
+        topCandidates.push({ candidate: selection, score });
+        topCandidates.sort((a, b) => b.score - a.score);
     }
 
-    // Stop if we find a very high probability match
-    if (bestScore > 0.98) break; // Higher threshold
-
-    attempts++;
+    // Break early if perfect
+    if (score > 0.9999) break;
   }
 
-  // Final Refinement Step
-  if (bestCandidate.length > 0) {
-      bestCandidate = optimizeGame(bestCandidate, dynamicStats, latestGame?.listaDezenas);
+  // Optimize all top candidates and pick the absolute best
+  let bestFinalCandidate: number[] = [];
+  let bestFinalScore = -1;
+
+  for (const item of topCandidates) {
+      const optimized = optimizeGame(item.candidate, dynamicStats, latestGame?.listaDezenas);
+      const optimizedScore = scoreCandidate(optimized, dynamicStats, latestGame?.listaDezenas);
+
+      if (optimizedScore > bestFinalScore) {
+          bestFinalScore = optimizedScore;
+          bestFinalCandidate = optimized;
+      }
   }
 
-  return bestCandidate.length > 0 ? bestCandidate : allNumbers.slice(0, quantity);
+  return bestFinalCandidate.length > 0 ? bestFinalCandidate : allNumbers.slice(0, quantity);
 };
 
 export const generateRandomGame = (quantity: number = 15): number[] => {
