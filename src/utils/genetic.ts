@@ -4,7 +4,6 @@ import {
     scoreCandidate,
     calculateMomentum,
     getWeightedRandomSubset,
-    calculateDelays,
     getCycleMissingNumbers
 } from './statistics';
 
@@ -18,7 +17,7 @@ export const generateGeneticGame = (history: LotofacilResult[], quantity: number
 
     const stats = getDynamicStats(history);
     const momentum = calculateMomentum(history);
-    const delays = calculateDelays(history);
+    // const delays = calculateDelays(history);
     const missingInCycle = getCycleMissingNumbers(history);
     const latestGameDezenas = history[0].listaDezenas;
 
