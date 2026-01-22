@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
 import { generateSmartGame, generateMax15Game, generateKNNGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
+import { generateGeneticGame } from './utils/genetic';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -19,7 +20,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -150,6 +151,8 @@ function App() {
        suggested = generateMax15Game(allFetchedGames, quantity);
     } else if (algorithmType === 'knn') {
        suggested = generateKNNGame(allFetchedGames, quantity);
+    } else if (algorithmType === 'genetic') {
+       suggested = generateGeneticGame(allFetchedGames, quantity);
     } else {
        // Utiliza o novo algoritmo "Smart"
        suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -269,10 +272,27 @@ function App() {
                             onChange={() => setAlgorithmType('knn')}
                             className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                         />
-                        <span className="font-semibold text-gray-800">Padrão Recorrente (IA)</span>
+                        <span className="font-semibold text-gray-800">Padrão Recorrente (KNN)</span>
                     </div>
                     <p className="text-xs text-gray-600 mt-1 ml-6">
-                        Analisa concursos passados similares ao atual e busca o que aconteceu em seguida (K-Nearest Neighbors).
+                        Busca padrões em concursos passados similares.
+                    </p>
+                 </label>
+
+                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                    <div className="flex items-center gap-2">
+                        <input
+                            type="radio"
+                            name="algorithm"
+                            value="genetic"
+                            checked={algorithmType === 'genetic'}
+                            onChange={() => setAlgorithmType('genetic')}
+                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                        />
+                        <span className="font-semibold text-gray-800">Genético (AI Evolutiva)</span>
+                    </div>
+                    <p className="text-xs text-gray-600 mt-1 ml-6">
+                        Simula evolução natural para encontrar a melhor combinação matemática. (Mais lento, porém preciso).
                     </p>
                  </label>
               </div>
@@ -394,7 +414,7 @@ function App() {
 
                     {/* KNN Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-pink-600">
-                      <h4 className="font-bold text-pink-700 mb-3 border-b pb-2">Padrão Recorrente (IA)</h4>
+                      <h4 className="font-bold text-pink-700 mb-3 border-b pb-2">Padrão Recorrente</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
                           <span className="text-gray-600 text-sm">Média de Acertos:</span>
@@ -412,6 +432,31 @@ function App() {
                            <span className="text-gray-500 text-xs">Precisão Global:</span>
                            <span className="font-bold text-blue-600 text-sm">
                                {simulationResult.knn ? ((simulationResult.knn.totalHits / (simulationResult.knn.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
+                           </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Genetic Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-orange-600">
+                      <h4 className="font-bold text-orange-700 mb-3 border-b pb-2">Genético (AI)</h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="font-bold text-gray-800 text-lg">{simulationResult.genetic?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">14 Pontos:</span>
+                          <span className="font-bold text-green-600">{simulationResult.genetic?.accuracyDistribution[14] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">15 Pontos:</span>
+                          <span className="font-bold text-yellow-600">{simulationResult.genetic?.accuracyDistribution[15] || 0}</span>
+                        </div>
+                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
+                           <span className="text-gray-500 text-xs">Precisão Global:</span>
+                           <span className="font-bold text-blue-600 text-sm">
+                               {simulationResult.genetic ? ((simulationResult.genetic.totalHits / (simulationResult.genetic.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
                            </span>
                         </div>
                       </div>
