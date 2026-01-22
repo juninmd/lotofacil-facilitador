@@ -322,7 +322,7 @@ function App() {
               <div className="flex gap-4 mb-4 flex-wrap">
                   <button
                     onClick={generateSuggestedGame}
-                    className="flex-1 bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
                     disabled={loading || mostFrequentNumbers.length === 0}
                   >
                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -333,7 +333,7 @@ function App() {
 
                   <button
                     onClick={runSimulation}
-                    className="flex-1 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2"
+                    className="flex-1 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                     disabled={loading || simulating || allFetchedGames.length < 20}
                   >
                     {simulating ? (
@@ -566,15 +566,22 @@ function App() {
 
                   <div className="mb-4 space-y-2">
                     <div className="p-2 bg-purple-50 rounded border border-purple-100 flex items-center justify-between">
-                       <span className="text-sm font-semibold text-purple-900">Probabilidade Calculada (Fit):</span>
+                       <span className="text-sm font-semibold text-purple-900" id="confidence-label">Probabilidade Calculada (Fit):</span>
                        <div className="flex items-center gap-2">
-                          <div className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden">
+                          <div
+                            className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden"
+                            role="progressbar"
+                            aria-labelledby="confidence-label"
+                            aria-valuenow={confidence}
+                            aria-valuemin={0}
+                            aria-valuemax={100}
+                          >
                              <div
                                className="h-full bg-gradient-to-r from-purple-400 to-green-500"
                                style={{ width: `${confidence}%` }}
                              />
                           </div>
-                          <span className="font-bold text-purple-700 text-sm">{confidence}%</span>
+                          <span className="font-bold text-purple-700 text-sm" aria-hidden="true">{confidence}%</span>
                        </div>
                     </div>
 
@@ -682,8 +689,23 @@ function App() {
                     </div>
                     {lastGameConfidence !== null && (
                         <div className="text-center text-sm border-t border-blue-200 pt-2 mt-2">
-                            <span className="block text-blue-700 font-medium">Probabilidade Calculada (Smart):</span>
-                            <span className="font-bold text-lg text-blue-900">{lastGameConfidence}%</span>
+                            <span className="block text-blue-700 font-medium" id="last-game-confidence-label">Probabilidade Calculada (Smart):</span>
+                            <div className="flex items-center justify-center gap-2 my-1">
+                                <div
+                                  className="w-24 h-3 bg-gray-200 rounded-full overflow-hidden"
+                                  role="progressbar"
+                                  aria-labelledby="last-game-confidence-label"
+                                  aria-valuenow={lastGameConfidence}
+                                  aria-valuemin={0}
+                                  aria-valuemax={100}
+                                >
+                                    <div
+                                        className="h-full bg-gradient-to-r from-blue-400 to-cyan-500"
+                                        style={{ width: `${lastGameConfidence}%` }}
+                                    />
+                                </div>
+                                <span className="font-bold text-blue-900" aria-hidden="true">{lastGameConfidence}%</span>
+                            </div>
                             <span className="block text-xs text-blue-600 mt-1">
                                 (O quão "previsível" foi este resultado baseando-se no histórico anterior)
                             </span>
