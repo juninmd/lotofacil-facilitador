@@ -1,4 +1,5 @@
 import type { LotofacilResult } from '../game';
+import { generateGeneticGame } from './genetic';
 
 export interface BacktestResult {
   11: number;
@@ -24,6 +25,7 @@ export interface SimulationResult {
     random: SimulationStats;
     max15: SimulationStats;
     knn: SimulationStats;
+    genetic: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -37,7 +39,7 @@ const FIBONACCI = new Set([1, 2, 3, 5, 8, 13, 21]);
 // Frame (Borda) numbers: 1-5, 6, 10, 11, 15, 16, 20, 21-25
 const FRAME = new Set([1, 2, 3, 4, 5, 6, 10, 11, 15, 16, 20, 21, 22, 23, 24, 25]);
 
-interface DynamicStats {
+export interface DynamicStats {
     meanOdd: number;
     stdDevOdd: number;
     meanSum: number;
@@ -263,7 +265,7 @@ export const getCycleMissingNumbers = (history: LotofacilResult[]): number[] => 
 };
 
 // Calculate mean and std dev dynamically from history
-const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
+export const getDynamicStats = (history: LotofacilResult[]): DynamicStats => {
     // We need at least 20 games to have decent stats
     const sample = history.slice(0, 100);
 
@@ -339,7 +341,7 @@ const gaussianScore = (value: number, mean: number, sigma: number): number => {
 };
 
 // Score a candidate game based on statistical ideal distribution
-const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDezenas?: number[]): number => {
+export const scoreCandidate = (numbers: number[], stats: DynamicStats, previousGameDezenas?: number[]): number => {
     const oddCount = numbers.filter(n => n % 2 !== 0).length;
     const sum = numbers.reduce((a, b) => a + b, 0);
     const primesCount = numbers.filter(n => PRIMES.has(n)).length;
@@ -405,7 +407,38 @@ export const calculateConfidence = (game: number[], history: LotofacilResult[]):
     return Math.floor(confidence);
 };
 
-const getWeightedRandomSubset = (
+export const calculateMomentum = (history: LotofacilResult[]): Map<number, number> => {
+    // Momentum = (Recent Frequency - Older Frequency)
+    // Positive = Getting Hotter
+    // Negative = Cooling Down
+    const momentum = new Map<number, number>();
+    if (history.length < 20) return momentum;
+
+    // Last 10 games vs previous 10 (Games 10-19)
+    const recent = history.slice(0, 10);
+    const previous = history.slice(10, 20);
+
+    const countFreq = (games: LotofacilResult[]) => {
+        const counts = new Map<number, number>();
+        games.forEach(g => g.listaDezenas.forEach(n => counts.set(n, (counts.get(n)||0)+1)));
+        return counts;
+    };
+
+    const recentCounts = countFreq(recent);
+    const prevCounts = countFreq(previous);
+
+    for(let i=1; i<=25; i++) {
+        const r = recentCounts.get(i) || 0;
+        const p = prevCounts.get(i) || 0;
+        // Slope: if r > p, momentum is positive.
+        // Scale: difference of 1-2 is normal.
+        momentum.set(i, (r - p));
+    }
+
+    return momentum;
+};
+
+export const getWeightedRandomSubset = (
   items: number[],
   weights: Map<number, number>,
   count: number
@@ -510,7 +543,10 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
   // 3. Calculate Delays (Recency)
   const delays = calculateDelays(history);
 
-  // 4. Build Weights
+  // 4. Calculate Momentum
+  const momentum = calculateMomentum(history);
+
+  // 5. Build Weights
   const weights = new Map<number, number>();
 
   // Exponential Decay Weighting for Frequency (Hot/Cold)
@@ -533,12 +569,18 @@ export const generateSmartGame = (history: LotofacilResult[], previousGameOverri
       const normalizedRecent = recentFreq / 10.0;
 
       const delay = delays.get(i) || 0;
+      const mom = momentum.get(i) || 0;
 
       let weight = 1.0;
 
       // Frequency Weight: blend long term and recent "hotness"
       weight += normalizedFreq * 1.2;
       weight += normalizedRecent * 1.0;
+
+      // Momentum Bonus: If rising, boost it.
+      if (mom > 0) {
+          weight += (mom * 0.2); // Small boost for rising stars
+      }
 
       // "Overheating" Penalty: If a number is too hot (high recent freq), it might be due for a break.
       // normalizedRecent is approx 0-2.0. If > 1.35, it's very hot.
@@ -765,13 +807,14 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const randomStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const max15Stats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const knnStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const geneticStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -800,6 +843,12 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         knnStats.totalHits += knnHits;
         knnStats.accuracyDistribution[knnHits] = (knnStats.accuracyDistribution[knnHits] || 0) + 1;
 
+        // Genetic Prediction
+        const geneticPrediction = generateGeneticGame(trainingData);
+        const geneticHits = geneticPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        geneticStats.totalHits += geneticHits;
+        geneticStats.accuracyDistribution[geneticHits] = (geneticStats.accuracyDistribution[geneticHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -810,6 +859,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         randomStats.gamesSimulated++;
         max15Stats.gamesSimulated++;
         knnStats.gamesSimulated++;
+        geneticStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -820,12 +870,14 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     calcAvg(randomStats);
     calcAvg(max15Stats);
     calcAvg(knnStats);
+    calcAvg(geneticStats);
 
     return {
         smart: smartStats,
         random: randomStats,
         max15: max15Stats,
-        knn: knnStats
+        knn: knnStats,
+        genetic: geneticStats
     };
 };
 
