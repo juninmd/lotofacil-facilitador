@@ -227,75 +227,78 @@ function App() {
               </p>
 
               {/* Algorithm Selector */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-6">
-                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            name="algorithm"
-                            value="smart"
-                            checked={algorithmType === 'smart'}
-                            onChange={() => setAlgorithmType('smart')}
-                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                        />
-                        <span className="font-semibold text-gray-800">Algoritmo Equilibrado (Smart)</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1 ml-6">
-                        Foca na consistência e médias estatísticas (Gaussiana). Bom para buscar 13 e 14 pontos com frequência.
-                    </p>
-                 </label>
+              <fieldset className="mb-6">
+                 <legend className="sr-only">Selecione o algoritmo de geração</legend>
+                 <div className="flex flex-col sm:flex-row gap-4">
+                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="algorithm"
+                                value="smart"
+                                checked={algorithmType === 'smart'}
+                                onChange={() => setAlgorithmType('smart')}
+                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="font-semibold text-gray-800">Algoritmo Equilibrado (Smart)</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 ml-6">
+                            Foca na consistência e médias estatísticas (Gaussiana). Bom para buscar 13 e 14 pontos com frequência.
+                        </p>
+                    </label>
 
-                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            name="algorithm"
-                            value="max15"
-                            checked={algorithmType === 'max15'}
-                            onChange={() => setAlgorithmType('max15')}
-                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                        />
-                        <span className="font-semibold text-gray-800">Busca 15 Pontos (Agressivo)</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1 ml-6">
-                        Estratégia fixa: 9 repetidos do último jogo + 6 ausentes mais atrasados. Foca no padrão mais comum dos 15 pontos.
-                    </p>
-                 </label>
+                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="algorithm"
+                                value="max15"
+                                checked={algorithmType === 'max15'}
+                                onChange={() => setAlgorithmType('max15')}
+                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="font-semibold text-gray-800">Busca 15 Pontos (Agressivo)</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 ml-6">
+                            Estratégia fixa: 9 repetidos do último jogo + 6 ausentes mais atrasados. Foca no padrão mais comum dos 15 pontos.
+                        </p>
+                    </label>
 
-                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            name="algorithm"
-                            value="knn"
-                            checked={algorithmType === 'knn'}
-                            onChange={() => setAlgorithmType('knn')}
-                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                        />
-                        <span className="font-semibold text-gray-800">Padrão Recorrente (KNN)</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1 ml-6">
-                        Busca padrões em concursos passados similares.
-                    </p>
-                 </label>
+                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="algorithm"
+                                value="knn"
+                                checked={algorithmType === 'knn'}
+                                onChange={() => setAlgorithmType('knn')}
+                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="font-semibold text-gray-800">Padrão Recorrente (KNN)</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 ml-6">
+                            Busca padrões em concursos passados similares.
+                        </p>
+                    </label>
 
-                 <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                    <div className="flex items-center gap-2">
-                        <input
-                            type="radio"
-                            name="algorithm"
-                            value="genetic"
-                            checked={algorithmType === 'genetic'}
-                            onChange={() => setAlgorithmType('genetic')}
-                            className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                        />
-                        <span className="font-semibold text-gray-800">Genético (AI Evolutiva)</span>
-                    </div>
-                    <p className="text-xs text-gray-600 mt-1 ml-6">
-                        Simula evolução natural para encontrar a melhor combinação matemática. (Mais lento, porém preciso).
-                    </p>
-                 </label>
-              </div>
+                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                        <div className="flex items-center gap-2">
+                            <input
+                                type="radio"
+                                name="algorithm"
+                                value="genetic"
+                                checked={algorithmType === 'genetic'}
+                                onChange={() => setAlgorithmType('genetic')}
+                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                            />
+                            <span className="font-semibold text-gray-800">Genético (AI Evolutiva)</span>
+                        </div>
+                        <p className="text-xs text-gray-600 mt-1 ml-6">
+                            Simula evolução natural para encontrar a melhor combinação matemática. (Mais lento, porém preciso).
+                        </p>
+                    </label>
+                 </div>
+              </fieldset>
 
               <div className="mb-6">
                  <label id="quantity-label" className="block text-sm font-medium text-gray-700 mb-2">Quantidade de Números na Aposta</label>

@@ -17,3 +17,7 @@
 ## 2026-01-28 - [Accessible Toggle Groups]
 **Learning:** Using `aria-pressed` on a group of buttons is a lightweight, accessible alternative to radio inputs for "pick one" UI patterns, preserving existing styles while informing screen readers.
 **Action:** When using buttons for selection, wrap them in a container with `role="group"` and proper labeling, and use `aria-pressed` to indicate the active state.
+
+## 2026-02-13 - [Semantic Radio Groups]
+**Learning:** Groups of radio buttons visually styled as cards often lose their semantic grouping context. Screen readers need a container to announce the group name.
+**Action:** Always wrap radio button groups in a `<fieldset>` with a `<legend>` (can be `sr-only`) to provide the necessary "question" context for the "answer" options.
