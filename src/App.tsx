@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, generateMax15Game, generateKNNGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
+import { generateSmartGame, generateMax15Game, generateKNNGame, generateMarkovGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
 import { generateGeneticGame } from './utils/genetic';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
@@ -20,7 +20,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -153,6 +153,8 @@ function App() {
        suggested = generateKNNGame(allFetchedGames, quantity);
     } else if (algorithmType === 'genetic') {
        suggested = generateGeneticGame(allFetchedGames, quantity);
+    } else if (algorithmType === 'markov') {
+       suggested = generateMarkovGame(allFetchedGames, undefined, quantity);
     } else {
        // Utiliza o novo algoritmo "Smart"
        suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -229,74 +231,94 @@ function App() {
               {/* Algorithm Selector */}
               <fieldset className="mb-6">
                  <legend className="sr-only">Selecione o algoritmo de geração</legend>
-                 <div className="flex flex-col sm:flex-row gap-4">
-                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="radio"
-                                name="algorithm"
-                                value="smart"
-                                checked={algorithmType === 'smart'}
-                                onChange={() => setAlgorithmType('smart')}
-                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className="font-semibold text-gray-800">Algoritmo Equilibrado (Smart)</span>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1 ml-6">
-                            Foca na consistência e médias estatísticas (Gaussiana). Bom para buscar 13 e 14 pontos com frequência.
-                        </p>
-                    </label>
+                 <div className="flex flex-col gap-2">
+                   <div className="flex flex-col sm:flex-row gap-4">
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="smart"
+                                  checked={algorithmType === 'smart'}
+                                  onChange={() => setAlgorithmType('smart')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Smart (Estatístico)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Gaussiana e pesos.
+                          </p>
+                      </label>
 
-                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="radio"
-                                name="algorithm"
-                                value="max15"
-                                checked={algorithmType === 'max15'}
-                                onChange={() => setAlgorithmType('max15')}
-                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className="font-semibold text-gray-800">Busca 15 Pontos (Agressivo)</span>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1 ml-6">
-                            Estratégia fixa: 9 repetidos do último jogo + 6 ausentes mais atrasados. Foca no padrão mais comum dos 15 pontos.
-                        </p>
-                    </label>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="max15"
+                                  checked={algorithmType === 'max15'}
+                                  onChange={() => setAlgorithmType('max15')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Max 15</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Padrão repetidos/ausentes.
+                          </p>
+                      </label>
 
-                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="radio"
-                                name="algorithm"
-                                value="knn"
-                                checked={algorithmType === 'knn'}
-                                onChange={() => setAlgorithmType('knn')}
-                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className="font-semibold text-gray-800">Padrão Recorrente (KNN)</span>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1 ml-6">
-                            Busca padrões em concursos passados similares.
-                        </p>
-                    </label>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="knn"
+                                  checked={algorithmType === 'knn'}
+                                  onChange={() => setAlgorithmType('knn')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">KNN (Recorrente)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Jogos similares passados.
+                          </p>
+                      </label>
+                   </div>
+                   <div className="flex flex-col sm:flex-row gap-4">
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="genetic"
+                                  checked={algorithmType === 'genetic'}
+                                  onChange={() => setAlgorithmType('genetic')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Genético (AI)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Evolução natural de candidatos.
+                          </p>
+                      </label>
 
-                    <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
-                        <div className="flex items-center gap-2">
-                            <input
-                                type="radio"
-                                name="algorithm"
-                                value="genetic"
-                                checked={algorithmType === 'genetic'}
-                                onChange={() => setAlgorithmType('genetic')}
-                                className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
-                            />
-                            <span className="font-semibold text-gray-800">Genético (AI Evolutiva)</span>
-                        </div>
-                        <p className="text-xs text-gray-600 mt-1 ml-6">
-                            Simula evolução natural para encontrar a melhor combinação matemática. (Mais lento, porém preciso).
-                        </p>
-                    </label>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'markov' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="markov"
+                                  checked={algorithmType === 'markov'}
+                                  onChange={() => setAlgorithmType('markov')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Padrão de Transição</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Cadeias de Markov (Probabilístico).
+                          </p>
+                      </label>
+                   </div>
                  </div>
               </fieldset>
 
@@ -364,78 +386,48 @@ function App() {
                     Comparativo de Eficiência (Últimos {simulationResult.smart.gamesSimulated} jogos)
                   </h3>
 
-                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {/* Smart Algorithm Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
-                      <h4 className="font-bold text-purple-700 mb-3 border-b pb-2">Algoritmo Inteligente</h4>
+                      <h4 className="font-bold text-purple-700 mb-3 border-b pb-2">Smart (Estatístico)</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
                           <span className="font-bold text-gray-800 text-lg">{simulationResult.smart.averageHits.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">14 Pontos:</span>
-                          <span className="font-bold text-green-600">{simulationResult.smart.accuracyDistribution[14] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">15 Pontos:</span>
-                          <span className="font-bold text-yellow-600">{simulationResult.smart.accuracyDistribution[15] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                           <span className="text-gray-500 text-xs">Precisão Global:</span>
-                           <span className="font-bold text-blue-600 text-sm">
-                               {((simulationResult.smart.totalHits / (simulationResult.smart.gamesSimulated * 15)) * 100).toFixed(1)}%
-                           </span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>14 Pts: <strong className="text-green-600">{simulationResult.smart.accuracyDistribution[14] || 0}</strong></span>
+                          <span>15 Pts: <strong className="text-yellow-600">{simulationResult.smart.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
 
                     {/* Max 15 Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-teal-600">
-                      <h4 className="font-bold text-teal-700 mb-3 border-b pb-2">Busca 15 Pontos</h4>
+                      <h4 className="font-bold text-teal-700 mb-3 border-b pb-2">Max 15</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
                           <span className="font-bold text-gray-800 text-lg">{simulationResult.max15?.averageHits.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">14 Pontos:</span>
-                          <span className="font-bold text-green-600">{simulationResult.max15?.accuracyDistribution[14] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">15 Pontos:</span>
-                          <span className="font-bold text-yellow-600">{simulationResult.max15?.accuracyDistribution[15] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                           <span className="text-gray-500 text-xs">Precisão Global:</span>
-                           <span className="font-bold text-blue-600 text-sm">
-                               {simulationResult.max15 ? ((simulationResult.max15.totalHits / (simulationResult.max15.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
-                           </span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>14 Pts: <strong className="text-green-600">{simulationResult.max15?.accuracyDistribution[14] || 0}</strong></span>
+                          <span>15 Pts: <strong className="text-yellow-600">{simulationResult.max15?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
 
                     {/* KNN Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-pink-600">
-                      <h4 className="font-bold text-pink-700 mb-3 border-b pb-2">Padrão Recorrente</h4>
+                      <h4 className="font-bold text-pink-700 mb-3 border-b pb-2">KNN (Recorrente)</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
                           <span className="font-bold text-gray-800 text-lg">{simulationResult.knn?.averageHits.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">14 Pontos:</span>
-                          <span className="font-bold text-green-600">{simulationResult.knn?.accuracyDistribution[14] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">15 Pontos:</span>
-                          <span className="font-bold text-yellow-600">{simulationResult.knn?.accuracyDistribution[15] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                           <span className="text-gray-500 text-xs">Precisão Global:</span>
-                           <span className="font-bold text-blue-600 text-sm">
-                               {simulationResult.knn ? ((simulationResult.knn.totalHits / (simulationResult.knn.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
-                           </span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                          <span>14 Pts: <strong className="text-green-600">{simulationResult.knn?.accuracyDistribution[14] || 0}</strong></span>
+                          <span>15 Pts: <strong className="text-yellow-600">{simulationResult.knn?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
@@ -445,66 +437,49 @@ function App() {
                       <h4 className="font-bold text-orange-700 mb-3 border-b pb-2">Genético (AI)</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
                           <span className="font-bold text-gray-800 text-lg">{simulationResult.genetic?.averageHits.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">14 Pontos:</span>
-                          <span className="font-bold text-green-600">{simulationResult.genetic?.accuracyDistribution[14] || 0}</span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.genetic?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.genetic?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
+                      </div>
+                    </div>
+
+                    {/* Markov Card (NEW) */}
+                    <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-cyan-600">
+                      <h4 className="font-bold text-cyan-700 mb-3 border-b pb-2">Markov (Transição)</h4>
+                      <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">15 Pontos:</span>
-                          <span className="font-bold text-yellow-600">{simulationResult.genetic?.accuracyDistribution[15] || 0}</span>
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-800 text-lg">{simulationResult.markov?.averageHits.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                           <span className="text-gray-500 text-xs">Precisão Global:</span>
-                           <span className="font-bold text-blue-600 text-sm">
-                               {simulationResult.genetic ? ((simulationResult.genetic.totalHits / (simulationResult.genetic.gamesSimulated * 15)) * 100).toFixed(1) : 0}%
-                           </span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.markov?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.markov?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
 
                     {/* Random Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-gray-400">
-                      <h4 className="font-bold text-gray-600 mb-3 border-b pb-2">Palpite Aleatório</h4>
+                      <h4 className="font-bold text-gray-600 mb-3 border-b pb-2">Aleatório</h4>
                       <div className="space-y-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">Média de Acertos:</span>
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
                           <span className="font-bold text-gray-800 text-lg">{simulationResult.random.averageHits.toFixed(2)}</span>
                         </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">14 Pontos:</span>
-                          <span className="font-bold text-green-600">{simulationResult.random.accuracyDistribution[14] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600 text-sm">15 Pontos:</span>
-                          <span className="font-bold text-yellow-600">{simulationResult.random.accuracyDistribution[15] || 0}</span>
-                        </div>
-                        <div className="flex justify-between items-center pt-2 border-t border-gray-100">
-                           <span className="text-gray-500 text-xs">Precisão Global:</span>
-                           <span className="font-bold text-blue-600 text-sm">
-                               {((simulationResult.random.totalHits / (simulationResult.random.gamesSimulated * 15)) * 100).toFixed(1)}%
-                           </span>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.random.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.random.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 text-center text-sm text-indigo-900 bg-indigo-100 p-3 rounded border border-indigo-200">
-                    {simulationResult.smart.averageHits > simulationResult.random.averageHits ? (
-                      <span>
-                        🚀 O <strong>Algoritmo Inteligente</strong> teve um desempenho{' '}
-                        <strong className="text-green-700">
-                          {((simulationResult.smart.averageHits / simulationResult.random.averageHits - 1) * 100).toFixed(1)}% superior
-                        </strong>{' '}
-                        à escolha aleatória nesta simulação.
-                      </span>
-                    ) : (
-                      <span>
-                        O algoritmo teve desempenho similar ao aleatório nesta amostra. Tente simular mais jogos para ver a tendência de longo prazo.
-                      </span>
-                    )}
+                    Comparação de {simulationResult.smart.gamesSimulated} jogos simulados no passado recente.
                   </div>
                 </div>
               )}
