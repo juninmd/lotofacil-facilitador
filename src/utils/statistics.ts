@@ -26,6 +26,7 @@ export interface SimulationResult {
     max15: SimulationStats;
     knn: SimulationStats;
     genetic: SimulationStats;
+    markov: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -739,6 +740,53 @@ export const generateMax15Game = (history: LotofacilResult[], quantity: number =
   return bestGame;
 };
 
+// Markov Chain Prediction
+export const generateMarkovGame = (history: LotofacilResult[], previousGameOverride?: LotofacilResult, quantity: number = 15): number[] => {
+    if (history.length < 2) return generateRandomGame(quantity);
+
+    // 1. Build Transition Matrix M[25][25]
+    // M[from][to] = count of times 'to' appeared in the next game when 'from' was in the current game.
+    const transitionMatrix = Array.from({ length: 26 }, () => Array(26).fill(0));
+    const totals = Array(26).fill(0);
+
+    // Iterate history (newest [0] to oldest [N])
+    // Transitions happen from history[i+1] -> history[i]
+    for (let i = 0; i < history.length - 1; i++) {
+        const nextGame = history[i]; // Result (Future relative to i+1)
+        const prevGame = history[i+1]; // Cause (Past relative to i)
+
+        prevGame.listaDezenas.forEach(fromNum => {
+            totals[fromNum]++;
+            nextGame.listaDezenas.forEach(toNum => {
+                transitionMatrix[fromNum][toNum]++;
+            });
+        });
+    }
+
+    // 2. Predict based on Target (Latest Game)
+    const targetGame = previousGameOverride || history[0];
+    const scores = new Map<number, number>();
+
+    // Initialize scores
+    for(let i=1; i<=25; i++) scores.set(i, 0);
+
+    targetGame.listaDezenas.forEach(fromNum => {
+        for (let candidate = 1; candidate <= 25; candidate++) {
+            const count = transitionMatrix[fromNum][candidate];
+            // Probability P(candidate | fromNum) = count / total_occurrences_of_fromNum
+            // We sum these probabilities.
+            const total = totals[fromNum] || 1;
+            const prob = count / total;
+
+            scores.set(candidate, (scores.get(candidate) || 0) + prob);
+        }
+    });
+
+    // 3. Selection
+    const allNumbers = Array.from({ length: 25 }, (_, i) => i + 1);
+    return getWeightedRandomSubset(allNumbers, scores, quantity);
+};
+
 // K-Nearest Neighbors (KNN) Pattern Matcher
 export const generateKNNGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
     if (history.length < 20) return generateSmartGame(history, undefined, quantity); // Fallback
@@ -807,7 +855,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -815,6 +863,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     const max15Stats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const knnStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const geneticStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const markovStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -849,6 +898,12 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         geneticStats.totalHits += geneticHits;
         geneticStats.accuracyDistribution[geneticHits] = (geneticStats.accuracyDistribution[geneticHits] || 0) + 1;
 
+        // Markov Prediction
+        const markovPrediction = generateMarkovGame(trainingData);
+        const markovHits = markovPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        markovStats.totalHits += markovHits;
+        markovStats.accuracyDistribution[markovHits] = (markovStats.accuracyDistribution[markovHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -860,6 +915,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         max15Stats.gamesSimulated++;
         knnStats.gamesSimulated++;
         geneticStats.gamesSimulated++;
+        markovStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -871,13 +927,15 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     calcAvg(max15Stats);
     calcAvg(knnStats);
     calcAvg(geneticStats);
+    calcAvg(markovStats);
 
     return {
         smart: smartStats,
         random: randomStats,
         max15: max15Stats,
         knn: knnStats,
-        genetic: geneticStats
+        genetic: geneticStats,
+        markov: markovStats
     };
 };
 
