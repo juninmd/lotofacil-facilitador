@@ -233,7 +233,7 @@ function App() {
                  <legend className="sr-only">Selecione o algoritmo de geração</legend>
                  <div className="flex flex-col gap-2">
                    <div className="flex flex-col sm:flex-row gap-4">
-                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'smart' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
                               <input
                                   type="radio"
@@ -250,7 +250,7 @@ function App() {
                           </p>
                       </label>
 
-                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'max15' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
                               <input
                                   type="radio"
@@ -267,7 +267,7 @@ function App() {
                           </p>
                       </label>
 
-                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'knn' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
                               <input
                                   type="radio"
@@ -285,7 +285,7 @@ function App() {
                       </label>
                    </div>
                    <div className="flex flex-col sm:flex-row gap-4">
-                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'genetic' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
                               <input
                                   type="radio"
@@ -302,7 +302,7 @@ function App() {
                           </p>
                       </label>
 
-                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'markov' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'markov' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
                           <div className="flex items-center gap-2">
                               <input
                                   type="radio"
@@ -334,7 +334,7 @@ function App() {
                                 onClick={() => setQuantity(q)}
                                 aria-pressed={quantity === q}
                                 aria-label={`${q} números, valor ${prices[q]}`}
-                                className={`px-4 py-2 rounded border transition-colors ${quantity === q ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                                className={`px-4 py-2 rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${quantity === q ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
                             >
                                 <span className="font-bold">{q}</span>
                                 <span className="block text-xs font-normal opacity-80">{prices[q]}</span>

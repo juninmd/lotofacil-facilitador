@@ -21,3 +21,7 @@
 ## 2026-02-13 - [Semantic Radio Groups]
 **Learning:** Groups of radio buttons visually styled as cards often lose their semantic grouping context. Screen readers need a container to announce the group name.
 **Action:** Always wrap radio button groups in a `<fieldset>` with a `<legend>` (can be `sr-only`) to provide the necessary "question" context for the "answer" options.
+
+## 2026-02-27 - [Card Focus Visibility]
+**Learning:** When using "Card Selection" patterns (inputs inside labels), the default focus ring on the tiny input is often missed. The entire card needs to light up to confirm context.
+**Action:** Use `focus-within:ring` on the container element to visually promote the focus state of the child input to the parent card.
