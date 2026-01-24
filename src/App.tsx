@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
-import { generateSmartGame, generateMax15Game, generateKNNGame, generateMarkovGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
+import { generateSmartGame, generateMax15Game, generateKNNGame, generateMarkovGame, generateConsensusGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
 import { generateGeneticGame } from './utils/genetic';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
@@ -20,7 +20,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -155,6 +155,8 @@ function App() {
        suggested = generateGeneticGame(allFetchedGames, quantity);
     } else if (algorithmType === 'markov') {
        suggested = generateMarkovGame(allFetchedGames, undefined, quantity);
+    } else if (algorithmType === 'consensus') {
+       suggested = generateConsensusGame(allFetchedGames, quantity);
     } else {
        // Utiliza o novo algoritmo "Smart"
        suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -319,6 +321,24 @@ function App() {
                           </p>
                       </label>
                    </div>
+                   <div className="flex flex-col sm:flex-row gap-4">
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'consensus' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="consensus"
+                                  checked={algorithmType === 'consensus'}
+                                  onChange={() => setAlgorithmType('consensus')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Consenso IA (Ensemble)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              União de votos de todos os algoritmos.
+                          </p>
+                      </label>
+                   </div>
                  </div>
               </fieldset>
 
@@ -387,6 +407,24 @@ function App() {
                   </h3>
 
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {/* Consensus Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-yellow-500 ring-1 ring-yellow-400">
+                      <h4 className="font-bold text-yellow-800 mb-3 border-b border-yellow-200 pb-2 flex justify-between items-center">
+                          Consenso IA
+                          <span className="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Recomendado</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.consensus?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.consensus?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.consensus?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* Smart Algorithm Card */}
                     <div className="bg-white p-4 rounded-lg shadow-sm border-l-4 border-purple-600">
                       <h4 className="font-bold text-purple-700 mb-3 border-b pb-2">Smart (Estatístico)</h4>
