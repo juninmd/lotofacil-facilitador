@@ -27,6 +27,7 @@ export interface SimulationResult {
     knn: SimulationStats;
     genetic: SimulationStats;
     markov: SimulationStats;
+    consensus: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -849,13 +850,65 @@ export const generateKNNGame = (history: LotofacilResult[], quantity: number = 1
     return Array.from(selection).sort((a, b) => a - b);
 };
 
+// Consensus / Ensemble Algorithm
+export const generateConsensusGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
+    if (history.length < 20) return generateSmartGame(history, undefined, quantity);
+
+    const votes = new Map<number, number>();
+    const countVote = (nums: number[]) => nums.forEach(n => votes.set(n, (votes.get(n) || 0) + 1));
+
+    // 1. Collect Votes from "Experts"
+    // Smart (x2) - Since it's probabilistic, we ask twice
+    countVote(generateSmartGame(history, undefined, quantity));
+    countVote(generateSmartGame(history, undefined, quantity));
+
+    // Markov (x2) - Probabilistic
+    countVote(generateMarkovGame(history, undefined, quantity));
+    countVote(generateMarkovGame(history, undefined, quantity));
+
+    // Genetic (x1) - Heavy, but strong
+    countVote(generateGeneticGame(history, quantity));
+
+    // KNN (x1) - Pattern matcher
+    countVote(generateKNNGame(history, quantity));
+
+    // Max15 (x1) - Alternative logic
+    countVote(generateMax15Game(history, quantity));
+
+    // 2. Tally and Sort
+    // Tie-breaker: Global Frequency in history
+    const frequencyMap = new Map<number, number>();
+    history.forEach(g => g.listaDezenas.forEach(n => frequencyMap.set(n, (frequencyMap.get(n) || 0) + 1)));
+
+    const sortedCandidates = Array.from(votes.entries())
+        .sort((a, b) => {
+            if (b[1] !== a[1]) return b[1] - a[1]; // Vote count desc
+            return (frequencyMap.get(b[0]) || 0) - (frequencyMap.get(a[0]) || 0); // Freq tie-breaker
+        })
+        .map(entry => entry[0]);
+
+    // 3. Select Top
+    const selection = sortedCandidates.slice(0, quantity);
+
+    // If we somehow don't have enough (rare), fill with Smart
+    if (selection.length < quantity) {
+        const fillers = generateSmartGame(history, undefined, quantity);
+        for(const n of fillers) {
+            if(selection.length >= quantity) break;
+            if(!selection.includes(n)) selection.push(n);
+        }
+    }
+
+    return selection.sort((a, b) => a - b);
+};
+
 
 export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations: number = 20): SimulationResult => {
     // We need training data (past games) for each simulation step
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -864,6 +917,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     const knnStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const geneticStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const markovStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const consensusStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -904,6 +958,12 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         markovStats.totalHits += markovHits;
         markovStats.accuracyDistribution[markovHits] = (markovStats.accuracyDistribution[markovHits] || 0) + 1;
 
+        // Consensus Prediction
+        const consensusPrediction = generateConsensusGame(trainingData);
+        const consensusHits = consensusPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        consensusStats.totalHits += consensusHits;
+        consensusStats.accuracyDistribution[consensusHits] = (consensusStats.accuracyDistribution[consensusHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -916,6 +976,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         knnStats.gamesSimulated++;
         geneticStats.gamesSimulated++;
         markovStats.gamesSimulated++;
+        consensusStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -928,6 +989,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     calcAvg(knnStats);
     calcAvg(geneticStats);
     calcAvg(markovStats);
+    calcAvg(consensusStats);
 
     return {
         smart: smartStats,
@@ -935,7 +997,8 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         max15: max15Stats,
         knn: knnStats,
         genetic: geneticStats,
-        markov: markovStats
+        markov: markovStats,
+        consensus: consensusStats
     };
 };
 
