@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getGame, getLatestGames, getMostFrequentNumbers, type LotofacilResult } from './game';
 import { generateSmartGame, generateMax15Game, generateKNNGame, generateMarkovGame, generateConsensusGame, backtestGame, simulateBacktest, getCycleMissingNumbers, calculateDelays, calculateConfidence, calculateProjectedStats, type BacktestResult, type SimulationResult, type ProjectedStats } from './utils/statistics';
 import { generateGeneticGame } from './utils/genetic';
+import { generateTensorFlowGame } from './utils/tensorflowStrategy';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -20,7 +21,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -138,43 +139,58 @@ function App() {
       });
   };
 
-  const generateSuggestedGame = () => {
+  const generateSuggestedGame = async () => {
     if (allFetchedGames.length === 0) {
       setError("Não há dados suficientes para gerar um jogo sugerido.");
       setSuggestedGame(null);
       return;
     }
 
-    let suggested: number[];
+    // Set loading (reusing searching state to show activity on button if needed, or just let UI block)
+    // Ideally we want a specific 'generating' state, but 'loading' works to disable buttons.
+    const wasLoading = loading; // preserve
+    if (!wasLoading) setLoading(true);
 
-    if (algorithmType === 'max15') {
-       suggested = generateMax15Game(allFetchedGames, quantity);
-    } else if (algorithmType === 'knn') {
-       suggested = generateKNNGame(allFetchedGames, quantity);
-    } else if (algorithmType === 'genetic') {
-       suggested = generateGeneticGame(allFetchedGames, quantity);
-    } else if (algorithmType === 'markov') {
-       suggested = generateMarkovGame(allFetchedGames, undefined, quantity);
-    } else if (algorithmType === 'consensus') {
-       suggested = generateConsensusGame(allFetchedGames, quantity);
-    } else {
-       // Utiliza o novo algoritmo "Smart"
-       suggested = generateSmartGame(allFetchedGames, undefined, quantity);
+    try {
+      let suggested: number[];
+
+      if (algorithmType === 'max15') {
+         suggested = generateMax15Game(allFetchedGames, quantity);
+      } else if (algorithmType === 'knn') {
+         suggested = generateKNNGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'genetic') {
+         suggested = generateGeneticGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'markov') {
+         suggested = generateMarkovGame(allFetchedGames, undefined, quantity);
+      } else if (algorithmType === 'consensus') {
+         suggested = generateConsensusGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'tensorflow') {
+         suggested = await generateTensorFlowGame(allFetchedGames, quantity);
+      } else {
+         // Utiliza o novo algoritmo "Smart"
+         suggested = generateSmartGame(allFetchedGames, undefined, quantity);
+      }
+
+      setSuggestedGame(suggested);
+
+      // Calculate Confidence
+      const conf = calculateConfidence(suggested, allFetchedGames);
+      setConfidence(conf);
+
+      // Calculate Projected Stats
+      const stats = calculateProjectedStats(suggested, allFetchedGames);
+      setProjectedStats(stats);
+
+      // Executa o Backtest automaticamente para este jogo específico contra a história
+      const result = backtestGame(suggested, allFetchedGames, quantity);
+      setBacktestResult(result);
+
+    } catch (err) {
+      console.error(err);
+      setError("Erro ao gerar jogo.");
+    } finally {
+      if (!wasLoading) setLoading(false);
     }
-
-    setSuggestedGame(suggested);
-
-    // Calculate Confidence
-    const conf = calculateConfidence(suggested, allFetchedGames);
-    setConfidence(conf);
-
-    // Calculate Projected Stats
-    const stats = calculateProjectedStats(suggested, allFetchedGames);
-    setProjectedStats(stats);
-
-    // Executa o Backtest automaticamente para este jogo específico contra a história
-    const result = backtestGame(suggested, allFetchedGames, quantity);
-    setBacktestResult(result);
   };
 
   const runSimulation = () => {
@@ -184,11 +200,17 @@ function App() {
       }
       setSimulating(true);
 
-      // Use setTimeout to allow UI update
-      setTimeout(() => {
-          const result = simulateBacktest(allFetchedGames, 20); // Simulate last 20 games
-          setSimulationResult(result);
-          setSimulating(false);
+      // Use setTimeout to allow UI update before heavy async operation
+      setTimeout(async () => {
+          try {
+              const result = await simulateBacktest(allFetchedGames, 20); // Simulate last 20 games
+              setSimulationResult(result);
+          } catch (e) {
+              console.error(e);
+              setError("Erro ao executar simulação.");
+          } finally {
+              setSimulating(false);
+          }
       }, 100);
   };
 
@@ -320,6 +342,23 @@ function App() {
                               Cadeias de Markov (Probabilístico).
                           </p>
                       </label>
+
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'tensorflow' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="tensorflow"
+                                  checked={algorithmType === 'tensorflow'}
+                                  onChange={() => setAlgorithmType('tensorflow')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Rede Neural (LSTM)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Machine Learning (TensorFlow).
+                          </p>
+                      </label>
                    </div>
                    <div className="flex flex-col sm:flex-row gap-4">
                       <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors ${algorithmType === 'consensus' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
@@ -421,6 +460,24 @@ function App() {
                         <div className="flex justify-between items-center text-xs text-gray-500">
                            <span>14 Pts: <strong className="text-green-600">{simulationResult.consensus?.accuracyDistribution[14] || 0}</strong></span>
                            <span>15 Pts: <strong className="text-yellow-600">{simulationResult.consensus?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* TensorFlow Card */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-indigo-600 ring-1 ring-indigo-400">
+                      <h4 className="font-bold text-indigo-800 mb-3 border-b border-indigo-200 pb-2 flex justify-between items-center">
+                          Rede Neural (LSTM)
+                          <span className="text-[10px] bg-indigo-100 text-indigo-800 px-2 py-0.5 rounded-full">ML</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.tensorflow?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.tensorflow?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.tensorflow?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
