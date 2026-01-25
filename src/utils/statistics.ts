@@ -1,5 +1,6 @@
 import type { LotofacilResult } from '../game';
 import { generateGeneticGame } from './genetic';
+import { generateTensorFlowGame } from './tensorflowStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -28,6 +29,7 @@ export interface SimulationResult {
     genetic: SimulationStats;
     markov: SimulationStats;
     consensus: SimulationStats;
+    tensorflow: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -903,12 +905,12 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
 };
 
 
-export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations: number = 20): SimulationResult => {
+export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimulations: number = 20): Promise<SimulationResult> => {
     // We need training data (past games) for each simulation step
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -918,6 +920,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     const geneticStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const markovStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const consensusStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const tensorflowStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -964,6 +967,12 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         consensusStats.totalHits += consensusHits;
         consensusStats.accuracyDistribution[consensusHits] = (consensusStats.accuracyDistribution[consensusHits] || 0) + 1;
 
+        // TensorFlow Prediction
+        const tensorflowPrediction = await generateTensorFlowGame(trainingData);
+        const tensorflowHits = tensorflowPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        tensorflowStats.totalHits += tensorflowHits;
+        tensorflowStats.accuracyDistribution[tensorflowHits] = (tensorflowStats.accuracyDistribution[tensorflowHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -977,6 +986,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         geneticStats.gamesSimulated++;
         markovStats.gamesSimulated++;
         consensusStats.gamesSimulated++;
+        tensorflowStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -990,6 +1000,7 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
     calcAvg(geneticStats);
     calcAvg(markovStats);
     calcAvg(consensusStats);
+    calcAvg(tensorflowStats);
 
     return {
         smart: smartStats,
@@ -998,7 +1009,8 @@ export const simulateBacktest = (fullHistory: LotofacilResult[], numSimulations:
         knn: knnStats,
         genetic: geneticStats,
         markov: markovStats,
-        consensus: consensusStats
+        consensus: consensusStats,
+        tensorflow: tensorflowStats
     };
 };
 
