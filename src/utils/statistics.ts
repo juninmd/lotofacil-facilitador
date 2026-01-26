@@ -1,6 +1,7 @@
 import type { LotofacilResult } from '../game';
 import { generateGeneticGame } from './genetic';
 import { generateTensorFlowGame } from './tensorflowStrategy';
+import { generateRegressionGame } from './regressionStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -30,6 +31,7 @@ export interface SimulationResult {
     markov: SimulationStats;
     consensus: SimulationStats;
     tensorflow: SimulationStats;
+    regression: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -877,6 +879,9 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
     // Max15 (x1) - Alternative logic
     countVote(generateMax15Game(history, quantity));
 
+    // Regression (x1) - Machine Learning (Linear)
+    countVote(generateRegressionGame(history, quantity));
+
     // 2. Tally and Sort
     // Tie-breaker: Global Frequency in history
     const frequencyMap = new Map<number, number>();
@@ -910,7 +915,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -921,6 +926,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     const markovStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const consensusStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const tensorflowStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const regressionStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -973,6 +979,12 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         tensorflowStats.totalHits += tensorflowHits;
         tensorflowStats.accuracyDistribution[tensorflowHits] = (tensorflowStats.accuracyDistribution[tensorflowHits] || 0) + 1;
 
+        // Regression Prediction (New)
+        const regressionPrediction = generateRegressionGame(trainingData);
+        const regressionHits = regressionPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        regressionStats.totalHits += regressionHits;
+        regressionStats.accuracyDistribution[regressionHits] = (regressionStats.accuracyDistribution[regressionHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -987,6 +999,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         markovStats.gamesSimulated++;
         consensusStats.gamesSimulated++;
         tensorflowStats.gamesSimulated++;
+        regressionStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -1001,6 +1014,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     calcAvg(markovStats);
     calcAvg(consensusStats);
     calcAvg(tensorflowStats);
+    calcAvg(regressionStats);
 
     return {
         smart: smartStats,
@@ -1010,7 +1024,8 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         genetic: geneticStats,
         markov: markovStats,
         consensus: consensusStats,
-        tensorflow: tensorflowStats
+        tensorflow: tensorflowStats,
+        regression: regressionStats
     };
 };
 
