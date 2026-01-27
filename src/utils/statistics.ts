@@ -2,6 +2,7 @@ import type { LotofacilResult } from '../game';
 import { generateGeneticGame } from './genetic';
 import { generateTensorFlowGame } from './tensorflowStrategy';
 import { generateRegressionGame } from './regressionStrategy';
+import { generateNeuralNetGame } from './neuralNetStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -32,6 +33,7 @@ export interface SimulationResult {
     consensus: SimulationStats;
     tensorflow: SimulationStats;
     regression: SimulationStats;
+    neuralNet: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -882,6 +884,12 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
     // Regression (x1) - Machine Learning (Linear)
     countVote(generateRegressionGame(history, quantity));
 
+    // Neural Net (x1) - MLP Classification
+    // Note: generateNeuralNetGame is async, but Consensus is synchronous currently.
+    // For now, we skip NeuralNet in consensus to avoid breaking sync flow,
+    // or we would need to make Consensus async.
+    // Let's keep it simple for now and rely on other methods.
+
     // 2. Tally and Sort
     // Tie-breaker: Global Frequency in history
     const frequencyMap = new Map<number, number>();
@@ -927,6 +935,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     const consensusStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const tensorflowStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const regressionStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const neuralNetStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -985,6 +994,12 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         regressionStats.totalHits += regressionHits;
         regressionStats.accuracyDistribution[regressionHits] = (regressionStats.accuracyDistribution[regressionHits] || 0) + 1;
 
+        // Neural Net Prediction
+        const neuralNetPrediction = await generateNeuralNetGame(trainingData);
+        const neuralNetHits = neuralNetPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        neuralNetStats.totalHits += neuralNetHits;
+        neuralNetStats.accuracyDistribution[neuralNetHits] = (neuralNetStats.accuracyDistribution[neuralNetHits] || 0) + 1;
+
         // Random Prediction
         const randomPrediction = generateRandomGame();
         const randomHits = randomPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -1000,6 +1015,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         consensusStats.gamesSimulated++;
         tensorflowStats.gamesSimulated++;
         regressionStats.gamesSimulated++;
+        neuralNetStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -1015,6 +1031,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     calcAvg(consensusStats);
     calcAvg(tensorflowStats);
     calcAvg(regressionStats);
+    calcAvg(neuralNetStats);
 
     return {
         smart: smartStats,
@@ -1025,7 +1042,8 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         markov: markovStats,
         consensus: consensusStats,
         tensorflow: tensorflowStats,
-        regression: regressionStats
+        regression: regressionStats,
+        neuralNet: neuralNetStats
     };
 };
 
