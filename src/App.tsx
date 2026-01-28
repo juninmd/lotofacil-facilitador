@@ -5,6 +5,7 @@ import { generateGeneticGame } from './utils/genetic';
 import { generateTensorFlowGame } from './utils/tensorflowStrategy';
 import { generateRegressionGame } from './utils/regressionStrategy';
 import { generateNeuralNetGame } from './utils/neuralNetStrategy';
+import { generateRandomForestGame } from './utils/randomForestStrategy';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -23,7 +24,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -172,6 +173,8 @@ function App() {
          suggested = generateRegressionGame(allFetchedGames, quantity);
       } else if (algorithmType === 'neuralNet') {
          suggested = await generateNeuralNetGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'randomForest') {
+         suggested = generateRandomForestGame(allFetchedGames, quantity);
       } else {
          // Utiliza o novo algoritmo "Smart"
          suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -209,7 +212,7 @@ function App() {
       // Use setTimeout to allow UI update before heavy async operation
       setTimeout(async () => {
           try {
-              const result = await simulateBacktest(allFetchedGames, 20); // Simulate last 20 games
+              const result = await simulateBacktest(allFetchedGames, 5); // Simulate last 5 games (Reduced for performance)
               setSimulationResult(result);
           } catch (e) {
               console.error(e);
@@ -418,6 +421,23 @@ function App() {
                               Classificação Profunda.
                           </p>
                       </label>
+
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'randomForest' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="randomForest"
+                                  checked={algorithmType === 'randomForest'}
+                                  onChange={() => setAlgorithmType('randomForest')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Random Forest</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Árvores de Decisão (Ensemble).
+                          </p>
+                      </label>
                    </div>
                  </div>
               </fieldset>
@@ -501,6 +521,24 @@ function App() {
                         <div className="flex justify-between items-center text-xs text-gray-500">
                            <span>14 Pts: <strong className="text-green-600">{simulationResult.consensus?.accuracyDistribution[14] || 0}</strong></span>
                            <span>15 Pts: <strong className="text-yellow-600">{simulationResult.consensus?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Random Forest Card (NEW) */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-emerald-800 ring-1 ring-emerald-600">
+                      <h4 className="font-bold text-emerald-900 mb-3 border-b border-emerald-300 pb-2 flex justify-between items-center">
+                          Random Forest
+                          <span className="text-[10px] bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded-full">Tree</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.randomForest?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.randomForest?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.randomForest?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>

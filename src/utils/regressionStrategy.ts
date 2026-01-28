@@ -2,7 +2,6 @@ import type { LotofacilResult } from '../game';
 import { getCycleMissingNumbers } from './statistics';
 
 // Constants
-const NUMBERS_COUNT = 25;
 const LEARNING_RATE = 0.05;
 const EPOCHS = 100;
 const TRAINING_WINDOW = 50; // Train on last 50 games
