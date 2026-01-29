@@ -6,6 +6,7 @@ import { generateTensorFlowGame } from './utils/tensorflowStrategy';
 import { generateRegressionGame } from './utils/regressionStrategy';
 import { generateNeuralNetGame } from './utils/neuralNetStrategy';
 import { generateRandomForestGame } from './utils/randomForestStrategy';
+import { generatePatternGame } from './utils/patternStrategy';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -24,7 +25,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -175,6 +176,8 @@ function App() {
          suggested = await generateNeuralNetGame(allFetchedGames, quantity);
       } else if (algorithmType === 'randomForest') {
          suggested = generateRandomForestGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'pattern') {
+         suggested = generatePatternGame(allFetchedGames, quantity);
       } else {
          // Utiliza o novo algoritmo "Smart"
          suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -439,6 +442,24 @@ function App() {
                           </p>
                       </label>
                    </div>
+                   <div className="flex flex-col sm:flex-row gap-4">
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'pattern' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="pattern"
+                                  checked={algorithmType === 'pattern'}
+                                  onChange={() => setAlgorithmType('pattern')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Padrão de Pares</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Associação e Grafos.
+                          </p>
+                      </label>
+                   </div>
                  </div>
               </fieldset>
 
@@ -521,6 +542,24 @@ function App() {
                         <div className="flex justify-between items-center text-xs text-gray-500">
                            <span>14 Pts: <strong className="text-green-600">{simulationResult.consensus?.accuracyDistribution[14] || 0}</strong></span>
                            <span>15 Pts: <strong className="text-yellow-600">{simulationResult.consensus?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Pattern Card (NEW) */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-cyan-800 ring-1 ring-cyan-600">
+                      <h4 className="font-bold text-cyan-900 mb-3 border-b border-cyan-300 pb-2 flex justify-between items-center">
+                          Padrão de Pares
+                          <span className="text-[10px] bg-cyan-100 text-cyan-900 px-2 py-0.5 rounded-full">Grafos</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.pattern?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.pattern?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.pattern?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>

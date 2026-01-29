@@ -4,6 +4,7 @@ import { generateTensorFlowGame } from './tensorflowStrategy';
 import { generateRegressionGame } from './regressionStrategy';
 import { generateNeuralNetGame } from './neuralNetStrategy';
 import { generateRandomForestGame } from './randomForestStrategy';
+import { generatePatternGame } from './patternStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -36,6 +37,7 @@ export interface SimulationResult {
     regression: SimulationStats;
     neuralNet: SimulationStats;
     randomForest: SimulationStats;
+    pattern: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -889,6 +891,9 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
     // Random Forest (x1)
     countVote(generateRandomForestGame(history, quantity));
 
+    // Pattern (x1) - Association Analysis
+    countVote(generatePatternGame(history, quantity));
+
     // Neural Net (x1) - MLP Classification
     // Note: generateNeuralNetGame is async, but Consensus is synchronous currently.
     // For now, we skip NeuralNet in consensus to avoid breaking sync flow,
@@ -928,7 +933,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -942,6 +947,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     const regressionStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const neuralNetStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const randomForestStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const patternStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -1006,6 +1012,12 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         randomForestStats.totalHits += randomForestHits;
         randomForestStats.accuracyDistribution[randomForestHits] = (randomForestStats.accuracyDistribution[randomForestHits] || 0) + 1;
 
+        // Pattern Prediction (New)
+        const patternPrediction = generatePatternGame(trainingData);
+        const patternHits = patternPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        patternStats.totalHits += patternHits;
+        patternStats.accuracyDistribution[patternHits] = (patternStats.accuracyDistribution[patternHits] || 0) + 1;
+
         // Neural Net Prediction
         const neuralNetPrediction = await generateNeuralNetGame(trainingData);
         const neuralNetHits = neuralNetPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -1029,6 +1041,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         regressionStats.gamesSimulated++;
         neuralNetStats.gamesSimulated++;
         randomForestStats.gamesSimulated++;
+        patternStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -1046,6 +1059,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     calcAvg(regressionStats);
     calcAvg(neuralNetStats);
     calcAvg(randomForestStats);
+    calcAvg(patternStats);
 
     return {
         smart: smartStats,
@@ -1058,7 +1072,8 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         tensorflow: tensorflowStats,
         regression: regressionStats,
         neuralNet: neuralNetStats,
-        randomForest: randomForestStats
+        randomForest: randomForestStats,
+        pattern: patternStats
     };
 };
 
