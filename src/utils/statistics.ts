@@ -5,6 +5,7 @@ import { generateRegressionGame } from './regressionStrategy';
 import { generateNeuralNetGame } from './neuralNetStrategy';
 import { generateRandomForestGame } from './randomForestStrategy';
 import { generatePatternGame } from './patternStrategy';
+import { generateBayesianGame } from './bayesianStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -38,6 +39,7 @@ export interface SimulationResult {
     neuralNet: SimulationStats;
     randomForest: SimulationStats;
     pattern: SimulationStats;
+    bayesian: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -933,7 +935,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats, bayesian: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -948,6 +950,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     const neuralNetStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const randomForestStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const patternStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const bayesianStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -1018,6 +1021,12 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         patternStats.totalHits += patternHits;
         patternStats.accuracyDistribution[patternHits] = (patternStats.accuracyDistribution[patternHits] || 0) + 1;
 
+        // Bayesian Prediction (New)
+        const bayesianPrediction = generateBayesianGame(trainingData);
+        const bayesianHits = bayesianPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        bayesianStats.totalHits += bayesianHits;
+        bayesianStats.accuracyDistribution[bayesianHits] = (bayesianStats.accuracyDistribution[bayesianHits] || 0) + 1;
+
         // Neural Net Prediction
         const neuralNetPrediction = await generateNeuralNetGame(trainingData);
         const neuralNetHits = neuralNetPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -1042,6 +1051,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         neuralNetStats.gamesSimulated++;
         randomForestStats.gamesSimulated++;
         patternStats.gamesSimulated++;
+        bayesianStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -1060,6 +1070,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     calcAvg(neuralNetStats);
     calcAvg(randomForestStats);
     calcAvg(patternStats);
+    calcAvg(bayesianStats);
 
     return {
         smart: smartStats,
@@ -1073,7 +1084,8 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         regression: regressionStats,
         neuralNet: neuralNetStats,
         randomForest: randomForestStats,
-        pattern: patternStats
+        pattern: patternStats,
+        bayesian: bayesianStats
     };
 };
 
