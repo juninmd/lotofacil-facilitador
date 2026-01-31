@@ -8,6 +8,7 @@ import { generateNeuralNetGame } from './utils/neuralNetStrategy';
 import { generateRandomForestGame } from './utils/randomForestStrategy';
 import { generatePatternGame } from './utils/patternStrategy';
 import { generateBayesianGame } from './utils/bayesianStrategy';
+import { generateGradientBoostingGame } from './utils/gradientBoostingStrategy';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -26,7 +27,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian' | 'gradientBoosting'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -181,6 +182,8 @@ function App() {
          suggested = generatePatternGame(allFetchedGames, quantity);
       } else if (algorithmType === 'bayesian') {
          suggested = generateBayesianGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'gradientBoosting') {
+         suggested = generateGradientBoostingGame(allFetchedGames, quantity);
       } else {
          // Utiliza o novo algoritmo "Smart"
          suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -479,6 +482,23 @@ function App() {
                               Naive Bayes Classifier.
                           </p>
                       </label>
+
+                      <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'gradientBoosting' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="gradientBoosting"
+                                  checked={algorithmType === 'gradientBoosting'}
+                                  onChange={() => setAlgorithmType('gradientBoosting')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Gradient Boosting</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Boosting Decision Trees.
+                          </p>
+                      </label>
                    </div>
                  </div>
               </fieldset>
@@ -580,6 +600,24 @@ function App() {
                         <div className="flex justify-between items-center text-xs text-gray-500">
                            <span>14 Pts: <strong className="text-green-600">{simulationResult.bayesian?.accuracyDistribution[14] || 0}</strong></span>
                            <span>15 Pts: <strong className="text-yellow-600">{simulationResult.bayesian?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Gradient Boosting Card (NEW) */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-amber-600 ring-1 ring-amber-400">
+                      <h4 className="font-bold text-amber-900 mb-3 border-b border-amber-200 pb-2 flex justify-between items-center">
+                          Gradient Boosting
+                          <span className="text-[10px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">GBDT</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.gradientBoosting?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.gradientBoosting?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.gradientBoosting?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
