@@ -91,7 +91,7 @@ export const generateRegressionGame = (
 
   // 1. Train Weights
   // We want to learn weights [w_freq10, w_freq50, w_delay, w_inPrev, w_missing, w_bias]
-  let weights = [0.1, 0.1, 0.1, 0.1, 0.5, 0.0]; // Initialize with some heuristic guess
+  const weights = [0.1, 0.1, 0.1, 0.1, 0.5, 0.0]; // Initialize with some heuristic guess
 
   // Training Loop
   for (let epoch = 0; epoch < EPOCHS; epoch++) {
