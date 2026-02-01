@@ -389,10 +389,10 @@ function App() {
                                   onChange={() => setAlgorithmType('regression')}
                                   className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                               />
-                              <span className="font-semibold text-gray-800">Regressão IA (Linear)</span>
+                              <span className="font-semibold text-gray-800">Regressão Logística</span>
                           </div>
                           <p className="text-xs text-gray-600 mt-1 ml-6">
-                              Análise Combinatória (SGD).
+                              Classificação Estatística (SGD).
                           </p>
                       </label>
 
@@ -406,10 +406,10 @@ function App() {
                                   onChange={() => setAlgorithmType('consensus')}
                                   className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
                               />
-                              <span className="font-semibold text-gray-800">Consenso IA (Ensemble)</span>
+                              <span className="font-semibold text-gray-800">Consenso IA (Ponderado)</span>
                           </div>
                           <p className="text-xs text-gray-600 mt-1 ml-6">
-                              União de votos de todos os algoritmos.
+                              União inteligente dos melhores algoritmos.
                           </p>
                       </label>
                    </div>
@@ -571,7 +571,7 @@ function App() {
                     {/* Consensus Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-yellow-500 ring-1 ring-yellow-400">
                       <h4 className="font-bold text-yellow-800 mb-3 border-b border-yellow-200 pb-2 flex justify-between items-center">
-                          Consenso IA
+                          Consenso Ponderado
                           <span className="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded-full">Recomendado</span>
                       </h4>
                       <div className="space-y-3">
@@ -697,7 +697,7 @@ function App() {
                     {/* Regression Card (NEW) */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-purple-800 ring-1 ring-purple-400">
                       <h4 className="font-bold text-purple-900 mb-3 border-b border-purple-200 pb-2 flex justify-between items-center">
-                          Regressão IA
+                          Regressão Logística
                           <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full">SGD</span>
                       </h4>
                       <div className="space-y-3">
