@@ -869,43 +869,47 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
     if (history.length < 20) return generateSmartGame(history, undefined, quantity);
 
     const votes = new Map<number, number>();
-    const countVote = (nums: number[]) => nums.forEach(n => votes.set(n, (votes.get(n) || 0) + 1));
+    // Weighted Voting Helper
+    const addVote = (nums: number[], weight: number) => {
+        nums.forEach(n => votes.set(n, (votes.get(n) || 0) + weight));
+    };
 
-    // 1. Collect Votes from "Experts"
-    // Smart (x2) - Since it's probabilistic, we ask twice
-    countVote(generateSmartGame(history, undefined, quantity));
-    countVote(generateSmartGame(history, undefined, quantity));
+    // 1. Collect Votes from "Experts" (Weighted Ensemble)
 
-    // Markov (x2) - Probabilistic
-    countVote(generateMarkovGame(history, undefined, quantity));
-    countVote(generateMarkovGame(history, undefined, quantity));
+    // Gradient Boosting (2.0) - Strongest ML
+    addVote(generateGradientBoostingGame(history, quantity), 2.0);
 
-    // Genetic (x1) - Heavy, but strong
-    countVote(generateGeneticGame(history, quantity));
+    // Random Forest (1.8) - Robust ML
+    addVote(generateRandomForestGame(history, quantity), 1.8);
 
-    // KNN (x1) - Pattern matcher
-    countVote(generateKNNGame(history, quantity));
+    // Genetic (1.5) - Good Search
+    addVote(generateGeneticGame(history, quantity), 1.5);
 
-    // Max15 (x1) - Alternative logic
-    countVote(generateMax15Game(history, quantity));
+    // Smart (1.2) - Heuristic Baseline
+    addVote(generateSmartGame(history, undefined, quantity), 1.2);
+    // Add a second variety of Smart with slightly different internal randoms if possible
+    addVote(generateSmartGame(history, undefined, quantity), 1.0);
 
-    // Regression (x1) - Machine Learning (Linear)
-    countVote(generateRegressionGame(history, quantity));
+    // Markov (1.2) - Probabilistic
+    addVote(generateMarkovGame(history, undefined, quantity), 1.2);
 
-    // Random Forest (x1)
-    countVote(generateRandomForestGame(history, quantity));
+    // Bayesian (1.3) - Strong Probabilistic
+    addVote(generateBayesianGame(history, quantity), 1.3);
 
-    // Pattern (x1) - Association Analysis
-    countVote(generatePatternGame(history, quantity));
+    // KNN (1.0) - Pattern
+    addVote(generateKNNGame(history, quantity), 1.0);
 
-    // Gradient Boosting (x1)
-    countVote(generateGradientBoostingGame(history, quantity));
+    // Max15 (0.8) - Simple
+    addVote(generateMax15Game(history, quantity), 0.8);
 
-    // Neural Net (x1) - MLP Classification
-    // Note: generateNeuralNetGame is async, but Consensus is synchronous currently.
-    // For now, we skip NeuralNet in consensus to avoid breaking sync flow,
-    // or we would need to make Consensus async.
-    // Let's keep it simple for now and rely on other methods.
+    // Regression (1.0) - Logistic
+    addVote(generateRegressionGame(history, quantity), 1.0);
+
+    // Pattern (1.0) - Graph
+    addVote(generatePatternGame(history, quantity), 1.0);
+
+    // Neural Net (Skip due to async, but we have coverage)
+    // If we could await, we'd give it 1.5
 
     // 2. Tally and Sort
     // Tie-breaker: Global Frequency in history
@@ -914,7 +918,8 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
 
     const sortedCandidates = Array.from(votes.entries())
         .sort((a, b) => {
-            if (b[1] !== a[1]) return b[1] - a[1]; // Vote count desc
+            // Sort by Weighted Vote Score Descending
+            if (Math.abs(b[1] - a[1]) > 0.01) return b[1] - a[1];
             return (frequencyMap.get(b[0]) || 0) - (frequencyMap.get(a[0]) || 0); // Freq tie-breaker
         })
         .map(entry => entry[0]);
@@ -922,7 +927,7 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
     // 3. Select Top
     const selection = sortedCandidates.slice(0, quantity);
 
-    // If we somehow don't have enough (rare), fill with Smart
+    // Fill if needed
     if (selection.length < quantity) {
         const fillers = generateSmartGame(history, undefined, quantity);
         for(const n of fillers) {

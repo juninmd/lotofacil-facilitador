@@ -40,7 +40,7 @@ try {
     }
 
     console.log('Running Simulation Backtest including Consensus...');
-    const simulation = simulateBacktest(history, 5);
+    const simulation = await simulateBacktest(history, 5);
 
     console.log('Consensus Stats:', simulation.consensus);
 

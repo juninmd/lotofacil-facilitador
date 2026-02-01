@@ -20,10 +20,12 @@ interface TreeNode {
 
 // --- Hyperparameters ---
 const LEARNING_RATE = 0.1;
-const N_ESTIMATORS = 30; // Number of trees
-const MAX_DEPTH = 3; // Shallow trees for boosting
+const N_ESTIMATORS = 50; // Increased from 30
+const MAX_DEPTH = 4; // Increased from 3
 const MIN_SAMPLES_SPLIT = 5;
 const TRAINING_WINDOW = 100; // Look back 100 games for training
+
+const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
 
 // --- Helper Functions ---
 
@@ -42,7 +44,7 @@ const extractFeatures = (
     // If targetIndex is 0 (Latest), we use history[1...]
     const pastStart = targetIndex + 1;
 
-    if (pastStart + 50 >= history.length) return [0,0,0,0,0,0];
+    if (pastStart + 50 >= history.length) return [0,0,0,0,0,0,0,0];
 
     const past10 = history.slice(pastStart, pastStart + 10);
     const past50 = history.slice(pastStart, pastStart + 50);
@@ -70,29 +72,29 @@ const extractFeatures = (
     const inPrev = prevGame && prevGame.listaDezenas.includes(number) ? 1.0 : 0.0;
 
     // 5. Missing In Cycle
-    // Calculating cycle for every point is heavy, so we approximate or calculate on the fly
-    // For performance, we'll calculate it only if history allows
     const cycleHistory = history.slice(pastStart);
-    // Note: getCycleMissingNumbers sorts the array, we should pass a copy if needed,
-    // but here we just need the return value.
     const missingNums = getCycleMissingNumbers(cycleHistory);
     const missing = missingNums.includes(number) ? 1.0 : 0.0;
 
     // 6. Momentum (Trend)
-    // We can use the pre-calculated momentum map if provided, or simplistic calc
     let momentum = 0;
     if (calculatedMomentum) {
         momentum = calculatedMomentum.get(number) || 0;
     } else {
-         // Simple momentum: Last 10 vs Previous 10
          const p10_20 = history.slice(pastStart+10, pastStart+20);
          let c10_20 = 0;
          p10_20.forEach(g => { if(g.listaDezenas.includes(number)) c10_20++; });
          momentum = c10 - c10_20;
     }
-    const normMomentum = Math.max(-1, Math.min(1, momentum / 5.0)); // Normalize approx
+    const normMomentum = Math.max(-1, Math.min(1, momentum / 5.0));
 
-    return [freq10, freq50, normDelay, inPrev, missing, normMomentum];
+    // 7. Is Prime (Static)
+    const isPrime = PRIMES.has(number) ? 1.0 : 0.0;
+
+    // 8. Is Odd (Static)
+    const isOdd = number % 2 !== 0 ? 1.0 : 0.0;
+
+    return [freq10, freq50, normDelay, inPrev, missing, normMomentum, isPrime, isOdd];
 };
 
 
@@ -219,6 +221,11 @@ class GradientBoostingClassifier {
         data.forEach(d => d.prediction = this.initialPrediction);
 
         for(let i=0; i<N_ESTIMATORS; i++) {
+            // Decay Learning Rate
+            // Reduces aggressive updates as we add more trees
+            // Simple decay: 0.1 -> 0.09...
+            const currentLearningRate = LEARNING_RATE * (1 / (1 + 0.01 * i));
+
             // 2. Calculate Residuals
             // r = label - sigmoid(prediction)
             const residuals = data.map(d => d.label - sigmoid(d.prediction!));
@@ -231,15 +238,16 @@ class GradientBoostingClassifier {
             // 4. Update Predictions
             data.forEach(d => {
                 const pred = tree.predict(d.features);
-                d.prediction = d.prediction! + LEARNING_RATE * pred;
+                d.prediction = d.prediction! + currentLearningRate * pred;
             });
         }
     }
 
     predictProb(features: number[]): number {
         let logOdds = this.initialPrediction;
-        for(const tree of this.trees) {
-            logOdds += LEARNING_RATE * tree.predict(features);
+        for(let i=0; i<this.trees.length; i++) {
+             const currentLearningRate = LEARNING_RATE * (1 / (1 + 0.01 * i));
+             logOdds += currentLearningRate * this.trees[i].predict(features);
         }
         return sigmoid(logOdds);
     }
@@ -257,22 +265,12 @@ export const generateGradientBoostingGame = (history: LotofacilResult[], quantit
     }
 
     // 1. Prepare Training Data
-    // We train one single model that learns "Probability of Number N appearing given Features X"
-    // Since the features include "Frequency" and "Delay" which are number-agnostic (relative),
-    // we can pool data from all numbers into one large dataset.
-    // OR we can train 25 separate models.
-    // Pooling is better for generalization if features are robust.
-    // Let's pool them for a stronger model with more data.
-
     const trainingData: DataPoint[] = [];
+
     // Select a subset of games for training to keep it fast
     // Games 1 to 50
     for(let i=1; i<=50; i++) {
         const targetGame = history[i];
-        // Calculate momentum once for this point in time
-        // Actually, momentum changes per number, let's just calc per number
-        // Optimization: pick 5 random numbers per game to train on, instead of all 25?
-        // No, let's do all 25. 50 * 25 = 1250 samples. Very fast.
         for(let n=1; n<=25; n++) {
             const label = targetGame.listaDezenas.includes(n) ? 1 : 0;
             const features = extractFeatures(history, i, n);

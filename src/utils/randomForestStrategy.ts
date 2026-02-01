@@ -17,10 +17,12 @@ interface TreeNode {
   right?: TreeNode;
 }
 
-const NUM_TREES = 10;
-const MAX_DEPTH = 5;
+const NUM_TREES = 50; // Increased from 10
+const MAX_DEPTH = 7; // Increased from 5
 const MIN_SAMPLES_SPLIT = 10;
 const TRAINING_WINDOW = 100;
+
+const PRIMES = new Set([2, 3, 5, 7, 11, 13, 17, 19, 23]);
 
 // --- Feature Extraction ---
 
@@ -37,7 +39,7 @@ const extractFeatures = (
 
   // Safety check
   if (pastStart + 50 >= history.length) {
-      return [0,0,0,0,0]; // Not enough history
+      return [0,0,0,0,0,0,0]; // Not enough history
   }
 
   const past10 = history.slice(pastStart, pastStart + 10);
@@ -66,14 +68,17 @@ const extractFeatures = (
   const inPrevious = prevGame && prevGame.listaDezenas.includes(number) ? 1.0 : 0.0;
 
   // 5. Missing in Cycle
-  // Note: This is computationally expensive if done for every sample.
-  // We can approximate or just calculate for the target context.
-  // For training, let's keep it simple.
   const cycleHistory = history.slice(pastStart);
   const missingNumbers = getCycleMissingNumbers(cycleHistory);
   const missingCycle = missingNumbers.includes(number) ? 1.0 : 0.0;
 
-  return [freq10, freq50, normDelay, inPrevious, missingCycle];
+  // 6. Is Prime (Static)
+  const isPrime = PRIMES.has(number) ? 1.0 : 0.0;
+
+  // 7. Is Odd (Static)
+  const isOdd = number % 2 !== 0 ? 1.0 : 0.0;
+
+  return [freq10, freq50, normDelay, inPrevious, missingCycle, isPrime, isOdd];
 };
 
 // --- Decision Tree Implementation ---
@@ -105,8 +110,8 @@ class DecisionTree {
     let bestThreshold = 0;
 
     // Random feature subset (sqrt of total features) for Random Forest variance
-    // We have 5 features, let's check 3 random features at each node
-    const featureIndices = [0, 1, 2, 3, 4].sort(() => 0.5 - Math.random()).slice(0, 3);
+    // We have 7 features, let's check 3 random features at each node (sqrt(7) ~= 2.6 -> 3)
+    const featureIndices = [0, 1, 2, 3, 4, 5, 6].sort(() => 0.5 - Math.random()).slice(0, 3);
 
     for (const featIdx of featureIndices) {
       // Check possible thresholds.
@@ -200,10 +205,6 @@ class RandomForest {
 
 export const generateRandomForestGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
     // 1. Gather Training Data
-    // We treat all numbers (1-25) and their history as samples.
-    // X = Features of Number N at Game G
-    // Y = Did Number N appear in Game G?
-
     if (history.length < TRAINING_WINDOW + 20) {
         // Fallback
         const all = Array.from({length: 25}, (_, i) => i + 1);
@@ -219,8 +220,7 @@ export const generateRandomForestGame = (history: LotofacilResult[], quantity: n
     for (let i = 1; i <= TRAINING_WINDOW; i++) {
         const targetGame = history[i];
 
-        // Optimization: Don't use ALL 25 numbers for every game to keep training size manageable.
-        // But for quality, we should. 25 * 100 = 2500 samples. It's fine for JS.
+        // Optimization: Train on all 25 numbers
         for (let num = 1; num <= 25; num++) {
             const label = targetGame.listaDezenas.includes(num) ? 1 : 0;
             const features = extractFeatures(history, i, num);
@@ -233,11 +233,6 @@ export const generateRandomForestGame = (history: LotofacilResult[], quantity: n
     rf.train(data);
 
     // 3. Predict Next Game (Index -1 effectively, future)
-    // We want to predict for the "upcoming" game.
-    // In our extractFeatures logic, targetIndex -1 means we use history[0...] as past.
-    // But since extractFeatures(..., targetIndex, ...) uses targetIndex+1 as start,
-    // we need to pass -1 so that start = 0.
-
     const scores: { num: number, prob: number }[] = [];
 
     for (let num = 1; num <= 25; num++) {
