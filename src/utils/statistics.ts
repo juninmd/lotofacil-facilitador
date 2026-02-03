@@ -7,6 +7,7 @@ import { generateRandomForestGame } from './randomForestStrategy';
 import { generatePatternGame } from './patternStrategy';
 import { generateBayesianGame } from './bayesianStrategy';
 import { generateGradientBoostingGame } from './gradientBoostingStrategy';
+import { generateXGBoostGame } from './xgbStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -42,6 +43,7 @@ export interface SimulationResult {
     pattern: SimulationStats;
     bayesian: SimulationStats;
     gradientBoosting: SimulationStats;
+    xgboost: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -876,6 +878,9 @@ export const generateConsensusGame = (history: LotofacilResult[], quantity: numb
 
     // 1. Collect Votes from "Experts" (Weighted Ensemble)
 
+    // XGBoost (2.2) - Improved GBDT
+    addVote(generateXGBoostGame(history, quantity), 2.2);
+
     // Gradient Boosting (2.0) - Strongest ML
     addVote(generateGradientBoostingGame(history, quantity), 2.0);
 
@@ -945,7 +950,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats, bayesian: emptyStats, gradientBoosting: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats, bayesian: emptyStats, gradientBoosting: emptyStats, xgboost: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -962,6 +967,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     const patternStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const bayesianStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const gradientBoostingStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const xgboostStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -1044,6 +1050,12 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         gradientBoostingStats.totalHits += gradientBoostingHits;
         gradientBoostingStats.accuracyDistribution[gradientBoostingHits] = (gradientBoostingStats.accuracyDistribution[gradientBoostingHits] || 0) + 1;
 
+        // XGBoost Prediction (New)
+        const xgbPrediction = generateXGBoostGame(trainingData);
+        const xgbHits = xgbPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        xgboostStats.totalHits += xgbHits;
+        xgboostStats.accuracyDistribution[xgbHits] = (xgboostStats.accuracyDistribution[xgbHits] || 0) + 1;
+
         // Neural Net Prediction
         const neuralNetPrediction = await generateNeuralNetGame(trainingData);
         const neuralNetHits = neuralNetPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
@@ -1070,6 +1082,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         patternStats.gamesSimulated++;
         bayesianStats.gamesSimulated++;
         gradientBoostingStats.gamesSimulated++;
+        xgboostStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -1090,6 +1103,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     calcAvg(patternStats);
     calcAvg(bayesianStats);
     calcAvg(gradientBoostingStats);
+    calcAvg(xgboostStats);
 
     return {
         smart: smartStats,
@@ -1105,7 +1119,8 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         randomForest: randomForestStats,
         pattern: patternStats,
         bayesian: bayesianStats,
-        gradientBoosting: gradientBoostingStats
+        gradientBoosting: gradientBoostingStats,
+        xgboost: xgboostStats
     };
 };
 
