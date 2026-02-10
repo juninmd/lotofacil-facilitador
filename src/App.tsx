@@ -10,6 +10,7 @@ import { generatePatternGame } from './utils/patternStrategy';
 import { generateBayesianGame } from './utils/bayesianStrategy';
 import { generateGradientBoostingGame } from './utils/gradientBoostingStrategy';
 import { generateXGBoostGame } from './utils/xgbStrategy';
+import { generateQLearningGame } from './utils/qLearningStrategy';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -28,7 +29,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian' | 'gradientBoosting' | 'xgboost'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian' | 'gradientBoosting' | 'xgboost' | 'qlearning'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -187,6 +188,8 @@ function App() {
          suggested = generateGradientBoostingGame(allFetchedGames, quantity);
       } else if (algorithmType === 'xgboost') {
          suggested = generateXGBoostGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'qlearning') {
+         suggested = generateQLearningGame(allFetchedGames, quantity);
       } else {
          // Utiliza o novo algoritmo "Smart"
          suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -520,6 +523,23 @@ function App() {
                               Extreme Gradient Boosting (Otimizado).
                           </p>
                       </label>
+
+                       <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'qlearning' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="qlearning"
+                                  checked={algorithmType === 'qlearning'}
+                                  onChange={() => setAlgorithmType('qlearning')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Q-Learning (RL)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Aprendizado por Reforço.
+                          </p>
+                      </label>
                    </div>
                  </div>
               </fieldset>
@@ -607,7 +627,25 @@ function App() {
                       </div>
                     </div>
 
-                    {/* XGBoost Card (NEW) */}
+                    {/* Q-Learning Card (NEW) */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-violet-600 ring-1 ring-violet-400">
+                      <h4 className="font-bold text-violet-900 mb-3 border-b border-violet-200 pb-2 flex justify-between items-center">
+                          Q-Learning (RL)
+                          <span className="text-[10px] bg-violet-100 text-violet-800 px-2 py-0.5 rounded-full">New</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.qlearning?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.qlearning?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.qlearning?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* XGBoost Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-red-600 ring-1 ring-red-400">
                       <h4 className="font-bold text-red-900 mb-3 border-b border-red-200 pb-2 flex justify-between items-center">
                           XGBoost (Novo)
@@ -625,7 +663,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Bayesian Card (NEW) */}
+                    {/* Bayesian Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-pink-800 ring-1 ring-pink-600">
                       <h4 className="font-bold text-pink-900 mb-3 border-b border-pink-300 pb-2 flex justify-between items-center">
                           Bayesiana
@@ -643,7 +681,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Gradient Boosting Card (NEW) */}
+                    {/* Gradient Boosting Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-amber-600 ring-1 ring-amber-400">
                       <h4 className="font-bold text-amber-900 mb-3 border-b border-amber-200 pb-2 flex justify-between items-center">
                           Gradient Boosting
@@ -661,7 +699,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Pattern Card (NEW) */}
+                    {/* Pattern Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-cyan-800 ring-1 ring-cyan-600">
                       <h4 className="font-bold text-cyan-900 mb-3 border-b border-cyan-300 pb-2 flex justify-between items-center">
                           Padrão de Pares
@@ -679,7 +717,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Random Forest Card (NEW) */}
+                    {/* Random Forest Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-emerald-800 ring-1 ring-emerald-600">
                       <h4 className="font-bold text-emerald-900 mb-3 border-b border-emerald-300 pb-2 flex justify-between items-center">
                           Random Forest
@@ -733,7 +771,7 @@ function App() {
                       </div>
                     </div>
 
-                    {/* Regression Card (NEW) */}
+                    {/* Regression Card */}
                     <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-purple-800 ring-1 ring-purple-400">
                       <h4 className="font-bold text-purple-900 mb-3 border-b border-purple-200 pb-2 flex justify-between items-center">
                           Regressão Logística
