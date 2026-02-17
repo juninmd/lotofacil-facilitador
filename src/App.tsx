@@ -11,6 +11,7 @@ import { generateBayesianGame } from './utils/bayesianStrategy';
 import { generateGradientBoostingGame } from './utils/gradientBoostingStrategy';
 import { generateXGBoostGame } from './utils/xgbStrategy';
 import { generateQLearningGame } from './utils/qLearningStrategy';
+import { generateBiLstmGame } from './utils/biLstmStrategy';
 import LotteryBall from './LotteryBall';
 import GameSearchForm from './GameSearchForm';
 
@@ -29,7 +30,7 @@ function App() {
   const [projectedStats, setProjectedStats] = useState<ProjectedStats | null>(null);
   const [missingInCycle, setMissingInCycle] = useState<number[]>([]);
   const [delays, setDelays] = useState<{number: number, count: number}[]>([]); // New State
-  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian' | 'gradientBoosting' | 'xgboost' | 'qlearning'>('smart');
+  const [algorithmType, setAlgorithmType] = useState<'smart' | 'max15' | 'knn' | 'genetic' | 'markov' | 'consensus' | 'tensorflow' | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian' | 'gradientBoosting' | 'xgboost' | 'qlearning' | 'bilstm'>('smart');
   const [quantity, setQuantity] = useState<number>(15);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -190,6 +191,8 @@ function App() {
          suggested = generateXGBoostGame(allFetchedGames, quantity);
       } else if (algorithmType === 'qlearning') {
          suggested = generateQLearningGame(allFetchedGames, quantity);
+      } else if (algorithmType === 'bilstm') {
+         suggested = await generateBiLstmGame(allFetchedGames, quantity);
       } else {
          // Utiliza o novo algoritmo "Smart"
          suggested = generateSmartGame(allFetchedGames, undefined, quantity);
@@ -540,6 +543,23 @@ function App() {
                               Aprendizado por Reforço.
                           </p>
                       </label>
+
+                       <label className={`flex-1 p-3 rounded border cursor-pointer transition-colors hover:shadow-md focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 ${algorithmType === 'bilstm' ? 'bg-purple-100 border-purple-500 ring-1 ring-purple-500' : 'bg-white border-gray-300 hover:bg-gray-50'}`}>
+                          <div className="flex items-center gap-2">
+                              <input
+                                  type="radio"
+                                  name="algorithm"
+                                  value="bilstm"
+                                  checked={algorithmType === 'bilstm'}
+                                  onChange={() => setAlgorithmType('bilstm')}
+                                  className="w-4 h-4 text-purple-600 focus:ring-purple-500 border-gray-300"
+                              />
+                              <span className="font-semibold text-gray-800">Bi-LSTM (Deep Learning)</span>
+                          </div>
+                          <p className="text-xs text-gray-600 mt-1 ml-6">
+                              Rede Neural Recorrente Bidirecional.
+                          </p>
+                      </label>
                    </div>
                  </div>
               </fieldset>
@@ -623,6 +643,24 @@ function App() {
                         <div className="flex justify-between items-center text-xs text-gray-500">
                            <span>14 Pts: <strong className="text-green-600">{simulationResult.consensus?.accuracyDistribution[14] || 0}</strong></span>
                            <span>15 Pts: <strong className="text-yellow-600">{simulationResult.consensus?.accuracyDistribution[15] || 0}</strong></span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bi-LSTM Card (NEW) */}
+                    <div className="bg-white p-4 rounded-lg shadow-md border-l-4 border-fuchsia-600 ring-1 ring-fuchsia-400">
+                      <h4 className="font-bold text-fuchsia-900 mb-3 border-b border-fuchsia-200 pb-2 flex justify-between items-center">
+                          Bi-LSTM (Deep Learning)
+                          <span className="text-[10px] bg-fuchsia-100 text-fuchsia-800 px-2 py-0.5 rounded-full">New</span>
+                      </h4>
+                      <div className="space-y-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600 text-sm">Média Acertos:</span>
+                          <span className="font-bold text-gray-900 text-lg">{simulationResult.bilstm?.averageHits.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center text-xs text-gray-500">
+                           <span>14 Pts: <strong className="text-green-600">{simulationResult.bilstm?.accuracyDistribution[14] || 0}</strong></span>
+                           <span>15 Pts: <strong className="text-yellow-600">{simulationResult.bilstm?.accuracyDistribution[15] || 0}</strong></span>
                         </div>
                       </div>
                     </div>
