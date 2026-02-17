@@ -9,6 +9,7 @@ import { generateBayesianGame } from './bayesianStrategy';
 import { generateGradientBoostingGame } from './gradientBoostingStrategy';
 import { generateXGBoostGame } from './xgbStrategy';
 import { generateQLearningGame } from './qLearningStrategy';
+import { generateBiLstmGame } from './biLstmStrategy';
 
 export interface BacktestResult {
   11: number;
@@ -46,6 +47,7 @@ export interface SimulationResult {
     gradientBoosting: SimulationStats;
     xgboost: SimulationStats;
     qlearning: SimulationStats;
+    bilstm: SimulationStats;
 }
 
 export interface ProjectedStats {
@@ -955,7 +957,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     // So we can only simulate up to fullHistory.length - 20 (approx)
     if (fullHistory.length < numSimulations + 20) {
          const emptyStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
-        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats, bayesian: emptyStats, gradientBoosting: emptyStats, xgboost: emptyStats, qlearning: emptyStats };
+        return { smart: emptyStats, random: emptyStats, max15: emptyStats, knn: emptyStats, genetic: emptyStats, markov: emptyStats, consensus: emptyStats, tensorflow: emptyStats, regression: emptyStats, neuralNet: emptyStats, randomForest: emptyStats, pattern: emptyStats, bayesian: emptyStats, gradientBoosting: emptyStats, xgboost: emptyStats, qlearning: emptyStats, bilstm: emptyStats };
     }
 
     const smartStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
@@ -974,6 +976,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     const gradientBoostingStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const xgboostStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
     const qLearningStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
+    const bilstmStats: SimulationStats = { gamesSimulated: 0, averageHits: 0, totalHits: 0, accuracyDistribution: {} };
 
     for (let i = 0; i < numSimulations; i++) {
         // Target is the game we are trying to predict (the "future")
@@ -1068,6 +1071,11 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         qLearningStats.totalHits += qLearningHits;
         qLearningStats.accuracyDistribution[qLearningHits] = (qLearningStats.accuracyDistribution[qLearningHits] || 0) + 1;
 
+        // Bi-LSTM Prediction (New)
+        const biLstmPrediction = await generateBiLstmGame(trainingData);
+        const biLstmHits = biLstmPrediction.filter(n => targetGame.listaDezenas.includes(n)).length;
+        bilstmStats.totalHits += biLstmHits;
+        bilstmStats.accuracyDistribution[biLstmHits] = (bilstmStats.accuracyDistribution[biLstmHits] || 0) + 1;
 
         // Neural Net Prediction
         const neuralNetPrediction = await generateNeuralNetGame(trainingData);
@@ -1097,6 +1105,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         gradientBoostingStats.gamesSimulated++;
         xgboostStats.gamesSimulated++;
         qLearningStats.gamesSimulated++;
+        bilstmStats.gamesSimulated++;
     }
 
     const calcAvg = (stats: SimulationStats) => {
@@ -1119,6 +1128,7 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
     calcAvg(gradientBoostingStats);
     calcAvg(xgboostStats);
     calcAvg(qLearningStats);
+    calcAvg(bilstmStats);
 
     return {
         smart: smartStats,
@@ -1136,7 +1146,8 @@ export const simulateBacktest = async (fullHistory: LotofacilResult[], numSimula
         bayesian: bayesianStats,
         gradientBoosting: gradientBoostingStats,
         xgboost: xgboostStats,
-        qlearning: qLearningStats
+        qlearning: qLearningStats,
+        bilstm: bilstmStats
     };
 };
 
