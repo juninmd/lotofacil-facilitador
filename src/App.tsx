@@ -251,15 +251,16 @@ function App() {
           <h1 className="text-4xl sm:text-5xl font-extrabold text-gradient tracking-tight">
             Lotofácil Facilitador
           </h1>
-          <p className="mt-3 text-gray-500 max-w-xl mx-auto text-sm sm:text-base">
+          <p className="mt-3 text-gray-600 max-w-xl mx-auto text-sm sm:text-base">
             Gere palpites com estatística, compare algoritmos e entenda suas
             chances reais — com transparência matemática.
           </p>
           {latestGameResult && (
-            <span className="mt-4 inline-flex items-center gap-1.5 text-xs text-gray-500 bg-white/70 border border-gray-200 rounded-full px-3 py-1">
+            <span className="mt-4 inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white/70 border border-gray-200 rounded-full px-3 py-1">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
               Último concurso: <strong className="text-gray-700">{latestGameResult.numero}</strong> · {latestGameResult.dataApuracao}
             </span>
+          )}
           )}
         </header>
 
@@ -606,7 +607,7 @@ function App() {
               <div className="flex gap-4 mb-4 flex-wrap">
                   <button
                     onClick={generateSuggestedGame}
-                    className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md shadow-violet-500/20 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
+                    className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md shadow-violet-500/20 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
                     disabled={loading || mostFrequentNumbers.length === 0}
                   >
                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -617,7 +618,7 @@ function App() {
 
                   <button
                     onClick={runSimulation}
-                    className="flex-1 bg-white text-indigo-700 font-semibold py-2.5 px-4 rounded-xl border border-indigo-200 shadow-sm hover:bg-indigo-50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:hover:translate-y-0 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                    className="flex-1 bg-white text-indigo-700 font-semibold py-2.5 px-4 rounded-xl border border-indigo-200 shadow-sm hover:bg-indigo-50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                     disabled={loading || simulating || allFetchedGames.length < 20}
                   >
                     {simulating ? (
