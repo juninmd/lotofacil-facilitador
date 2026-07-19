@@ -17,7 +17,7 @@ const getGames = async (count: number): Promise<LotofacilResult[]> => {
     // But type says number. The API actually returns strings in "listaDezenas" usually.
     // We must parse it.
 
-    const parse = (g: LotofacilResult & { listaDezenas: (string | number)[] }): LotofacilResult => ({
+    const parse = (g: Omit<LotofacilResult, 'listaDezenas'> & { listaDezenas: (string | number)[] }): LotofacilResult => ({
         ...g,
         listaDezenas: g.listaDezenas.map((d: string | number) => Number(d))
     });
