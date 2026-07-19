@@ -14,6 +14,8 @@ dist-ssr
 *.tsbuildinfo
 coverage
 bench-report.json
+walkforward-report.json
+walkforward-fixture.json
 
 # Editor directories and files
 .vscode/*
