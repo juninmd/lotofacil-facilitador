@@ -24,7 +24,7 @@ export const comb = (n: number, r: number): number => {
 // Hipergeométrica: universo 25, "sucessos" = 15 sorteadas, amostra = marks.
 export const probExactHits = (marks: number, hits: number): number => {
   if (marks < DRAWN || marks > UNIVERSE) {
-    // Para cartelas de 15..20; fora disso a fórmula geral ainda vale para marks>=hits.
+    return 0;
   }
   const lo = Math.max(0, marks - (UNIVERSE - DRAWN));
   const hi = Math.min(DRAWN, marks);
