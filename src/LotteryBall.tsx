@@ -13,7 +13,7 @@ interface LotteryBallProps {
  */
 const LotteryBall: React.FC<LotteryBallProps> = ({
   number,
-  colorClass = 'bg-gradient-to-br from-violet-500 to-fuchsia-600 text-white',
+  colorClass = 'bg-gradient-to-br from-violet-600 to-fuchsia-700 text-white',
   sizeClass = 'w-11 h-11 text-lg'
 }) => {
   return (
