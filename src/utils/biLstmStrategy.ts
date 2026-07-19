@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs';
+import type * as tftypes from '@tensorflow/tfjs';
 import type { LotofacilResult } from '../game';
 
 // Constants
@@ -47,6 +47,9 @@ export const generateBiLstmGame = async (
       return Array.from({ length: quantity }, () => Math.floor(Math.random() * 25) + 1);
   }
 
+  // Carrega o TensorFlow sob demanda (lazy) para não pesar o bundle inicial.
+  const tf = await import('@tensorflow/tfjs');
+
   // Convert to Tensors
   const xs = tf.tensor3d(inputs);
   const ys = tf.tensor2d(outputs);
@@ -60,7 +63,7 @@ export const generateBiLstmGame = async (
       layer: tf.layers.lstm({
           units: 64, // Increased units for better capacity
           returnSequences: false,
-      }) as tf.layers.RNN,
+      }) as tftypes.layers.RNN,
       inputShape: [TIME_STEPS, NUMBERS_COUNT]
   }));
 
@@ -98,7 +101,7 @@ export const generateBiLstmGame = async (
   const lastSequence = dataVectors.slice(dataVectors.length - TIME_STEPS);
   const inputTensor = tf.tensor3d([lastSequence]);
 
-  const predictionTensor = model.predict(inputTensor) as tf.Tensor;
+  const predictionTensor = model.predict(inputTensor) as tftypes.Tensor;
   const predictionArray = (await predictionTensor.data()) as Float32Array;
 
   // Cleanup tensors

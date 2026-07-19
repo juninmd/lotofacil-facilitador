@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs';
+import type * as tftypes from '@tensorflow/tfjs';
 import type { LotofacilResult } from '../game';
 
 // Constants
@@ -32,6 +32,9 @@ export const generateNeuralNetGame = async (
     console.warn('Not enough history for NeuralNet training. Returning random.');
     return Array.from({ length: quantity }, () => Math.floor(Math.random() * 25) + 1);
   }
+
+  // Carrega o TensorFlow sob demanda (lazy) para não pesar o bundle inicial.
+  const tf = await import('@tensorflow/tfjs');
 
   // 1. Prepare Data
   // History is sorted Newest -> Oldest.
@@ -109,7 +112,7 @@ export const generateNeuralNetGame = async (
 
   const inputTensor = tf.tensor2d([currentInputFlat]);
 
-  const predictionTensor = model.predict(inputTensor) as tf.Tensor;
+  const predictionTensor = model.predict(inputTensor) as tftypes.Tensor;
   const predictionArray = (await predictionTensor.data()) as Float32Array;
 
   // Cleanup
