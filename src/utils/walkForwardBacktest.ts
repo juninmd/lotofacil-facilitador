@@ -33,7 +33,7 @@ export const generateFromPatterns = (
       let tw = 0;
       for (const n of pool) tw += weights.get(n) || 0.01;
       let r = rnd() * tw;
-      let idx = 0;
+      let idx = pool.length - 1;
       for (let i = 0; i < pool.length; i++) {
         r -= weights.get(pool[i]) || 0.01;
         if (r <= 0) { idx = i; break; }
