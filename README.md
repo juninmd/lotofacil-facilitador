@@ -50,6 +50,40 @@ O aplicativo estará disponível em `http://localhost:5173` (ou outra porta disp
 *   Análise de padrões (pares/ímpares, repetidos, etc.).
 *   Histórico de jogos.
 
+## Homologação & Testes
+
+O projeto usa **vitest**. Testes cobrem invariantes dos 14 geradores, funções
+estatísticas puras, probabilidade exata (hipergeométrica) e desdobramento.
+
+```bash
+pnpm test            # suite determinística (entra no CI)
+pnpm test:coverage   # relatório de cobertura
+pnpm test:backtest   # backtest + mega-benchmark com dados REAIS da Caixa (fora do CI)
+```
+
+## A verdade matemática (leia antes de apostar)
+
+A Lotofácil sorteia 15 de 25 dezenas de forma **uniforme e independente**. O
+benchmark com dados reais (`pnpm test:backtest`) comprova:
+
+- **Prever não funciona.** Todas as estratégias (heurística, Markov, ML, ensemble)
+  e até a aposta aleatória empatam na esperança de **9,0 acertos** ao marcar 15
+  dezenas. Sorteios passados não influenciam os futuros.
+- **A única forma real de acertar mais números** é marcar mais dezenas — o que
+  aumenta a probabilidade de forma exata, ao custo de mais combinações:
+
+  | Dezenas | Esperança | P(≥14) | Custo (combinações × R$3,50) |
+  |---:|---:|---:|---:|
+  | 15 | 9,0 | ~0,03% | R$ 3,50 (1) |
+  | 16 | 9,6 | maior | R$ 56 (16) |
+  | 18 | 10,8 | maior | R$ 2.856 (816) |
+  | 20 | 12,0 | maior | R$ 54.264 (15.504) |
+
+- **Desdobramento** (wheeling) garante um número mínimo de acertos de forma
+  **matemática** (não por sorte), distribuindo um pool em vários jogos.
+
+⚠️ Aposta é entretenimento, não investimento. Jogue com responsabilidade.
+
 ## Contribuição
 
 Contribuições são bem-vindas! Sinta-se à vontade para abrir issues ou enviar pull requests.
