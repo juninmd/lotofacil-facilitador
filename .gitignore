@@ -13,6 +13,7 @@ dist-ssr
 *.local
 *.tsbuildinfo
 coverage
+bench-report.json
 
 # Editor directories and files
 .vscode/*
