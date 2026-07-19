@@ -17,9 +17,9 @@ const getGames = async (count: number): Promise<LotofacilResult[]> => {
     // But type says number. The API actually returns strings in "listaDezenas" usually.
     // We must parse it.
 
-    const parse = (g: any): LotofacilResult => ({
+    const parse = (g: LotofacilResult & { listaDezenas: (string | number)[] }): LotofacilResult => ({
         ...g,
-        listaDezenas: g.listaDezenas.map((d: any) => Number(d))
+        listaDezenas: g.listaDezenas.map((d: string | number) => Number(d))
     });
 
     const games: LotofacilResult[] = [parse(latest)];
@@ -35,7 +35,7 @@ const getGames = async (count: number): Promise<LotofacilResult[]> => {
             fetch(`https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil/${num}`)
             .then(r => r.json())
             .then(d => { games.push(parse(d)); })
-            .catch(e => console.error(`Failed ${num}`))
+            .catch(() => console.error(`Failed ${num}`))
         );
         // Throttle slightly
         if (i % 5 === 0) await new Promise(r => setTimeout(r, 100));
