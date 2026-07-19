@@ -242,11 +242,29 @@ function App() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col items-center justify-center p-4">
-      <div className="bg-white shadow-lg rounded-lg p-6 w-full max-w-6xl"> {/* Increased max-w */}
-        <h1 className="text-4xl font-bold text-center text-blue-700 mb-6">Lotofácil Facilitador</h1>
+    <div className="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6">
+      <div className="glass shadow-xl ring-1 ring-black/5 rounded-3xl p-6 sm:p-8 w-full max-w-6xl my-6 animate-fade-in">
+        <header className="text-center mb-8">
+          <div className="inline-flex items-center gap-2 mb-3 px-3 py-1 rounded-full bg-violet-100/80 text-violet-700 text-xs font-semibold tracking-wide">
+            <span className="text-base leading-none">🍀</span> TREVO DA SORTE · ANÁLISE ESTATÍSTICA
+          </div>
+          <h1 className="text-4xl sm:text-5xl font-extrabold text-gradient tracking-tight">
+            Lotofácil Facilitador
+          </h1>
+          <p className="mt-3 text-gray-600 max-w-xl mx-auto text-sm sm:text-base">
+            Gere palpites com estatística, compare algoritmos e entenda suas
+            chances reais — com transparência matemática.
+          </p>
+          {latestGameResult && (
+            <span className="mt-4 inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white/70 border border-gray-200 rounded-full px-3 py-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              Último concurso: <strong className="text-gray-700">{latestGameResult.numero}</strong> · {latestGameResult.dataApuracao}
+            </span>
+          )}
+          )}
+        </header>
 
-        {loading && <p className="text-center text-blue-600 mb-4" role="status">Carregando dados da Lotofácil...</p>}
+        {loading && <p className="text-center text-violet-600 mb-4" role="status">Carregando dados da Lotofácil...</p>}
         {error && (
           <div className="mt-4 p-3 bg-red-100 border border-red-300 text-red-800 rounded-md text-center" role="alert">
             <p>{error}</p>
@@ -257,8 +275,8 @@ function App() {
           {/* Coluna Principal - Buscar Jogo e Gerar Jogo */}
           <div className="lg:col-span-2 flex flex-col gap-6"> {/* Main content takes 2 columns on large screens */}
             {/* Área para inserção e validação de jogos */}
-            <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Buscar Jogo</h2>
+            <div className="bg-white/60 p-5 border border-gray-200/70 rounded-2xl shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span className="text-violet-500">🔎</span> Buscar Jogo</h2>
               <GameSearchForm onSearch={handleSearchGame} searching={searching} />
               {gameResult && (
                 <div className="mt-4 p-3 bg-green-100 border border-green-300 text-green-800 rounded-md" role="region" aria-label="Resultado da busca">
@@ -273,8 +291,8 @@ function App() {
             </div>
 
             {/* Área para Gerar Jogo Sugerido */}
-            <div className="bg-gray-50 p-4 border border-gray-200 rounded-md">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">Gerar Jogo Inteligente (IA)</h2>
+            <div className="bg-white/60 p-5 border border-gray-200/70 rounded-2xl shadow-sm">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2"><span className="text-violet-500">✨</span> Gerar Jogo Inteligente (IA)</h2>
               <p className="text-gray-600 mb-4">
                 Escolha o algoritmo e gere uma sugestão baseada em estatísticas.
               </p>
@@ -576,7 +594,7 @@ function App() {
                                 onClick={() => setQuantity(q)}
                                 aria-pressed={quantity === q}
                                 aria-label={`${q} números, valor ${prices[q]}`}
-                                className={`px-4 py-2 rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 ${quantity === q ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'}`}
+                                className={`px-4 py-2 rounded-xl border transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2 ${quantity === q ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white border-transparent shadow-md shadow-violet-500/20 -translate-y-0.5' : 'bg-white text-gray-700 border-gray-300 hover:bg-violet-50 hover:border-violet-300'}`}
                             >
                                 <span className="font-bold">{q}</span>
                                 <span className="block text-xs font-normal opacity-80">{prices[q]}</span>
@@ -589,7 +607,7 @@ function App() {
               <div className="flex gap-4 mb-4 flex-wrap">
                   <button
                     onClick={generateSuggestedGame}
-                    className="flex-1 bg-purple-600 text-white p-2 rounded-md hover:bg-purple-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
+                    className="flex-1 bg-gradient-to-r from-violet-600 to-fuchsia-600 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md shadow-violet-500/20 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-offset-2"
                     disabled={loading || mostFrequentNumbers.length === 0}
                   >
                     <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
@@ -600,7 +618,7 @@ function App() {
 
                   <button
                     onClick={runSimulation}
-                    className="flex-1 bg-indigo-600 text-white p-2 rounded-md hover:bg-indigo-700 transition duration-200 disabled:opacity-50 flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
+                    className="flex-1 bg-white text-indigo-700 font-semibold py-2.5 px-4 rounded-xl border border-indigo-200 shadow-sm hover:bg-indigo-50 hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 focus-visible:ring-offset-2"
                     disabled={loading || simulating || allFetchedGames.length < 20}
                   >
                     {simulating ? (

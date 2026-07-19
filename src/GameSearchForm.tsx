@@ -21,15 +21,15 @@ const GameSearchForm: React.FC<GameSearchFormProps> = ({ onSearch, searching }) 
         type="number"
         inputMode="numeric"
         placeholder="Digite o número do jogo (ex: 2500)"
-        className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        className="p-2.5 bg-white border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-violet-400 transition-shadow"
         value={gameNumber}
         onChange={(e) => setGameNumber(e.target.value)}
       />
       <button
         type="submit"
         disabled={searching}
-        className={`bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition duration-200 focus-visible:ring-4 focus-visible:ring-blue-300 flex justify-center items-center gap-2 ${
-          searching ? 'opacity-75 cursor-not-allowed' : ''
+        className={`bg-gradient-to-r from-violet-600 to-indigo-600 text-white font-semibold py-2.5 px-4 rounded-xl shadow-md shadow-violet-500/20 hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 transition-all duration-200 focus-visible:ring-4 focus-visible:ring-violet-300 flex justify-center items-center gap-2 ${
+          searching ? 'opacity-75 cursor-not-allowed hover:translate-y-0' : ''
         }`}
         aria-busy={searching}
       >
