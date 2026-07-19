@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { loadHistory } from './loadHistory';
+import { loadHistory } from './loadHistory.bench';
 import {
   generateSmartGame,
   generateMarkovGame,

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { loadHistory } from './loadHistory';
+import { loadHistory } from './loadHistory.bench';
 import { analyzeTransitions } from './transitionAnalysis';
 import { generateOptimizedGame } from './optimizedGenerator';
 import { generateFromPatterns } from './walkForwardBacktest';

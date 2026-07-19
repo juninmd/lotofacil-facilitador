@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync } from 'node:fs';
 import type { LotofacilResult } from '../game';
-import { loadHistory } from './loadHistory';
+import { loadHistory } from './loadHistory.bench';
 import {
   generateSmartGame,
   generateMarkovGame,
