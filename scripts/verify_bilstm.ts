@@ -38,7 +38,7 @@ async function fetchHistory(targetId: number, count: number): Promise<LotofacilR
             // Small delay to avoid rate limit
             await new Promise(r => setTimeout(r, 200));
         }
-    } catch (e) {
+    } catch {
         console.warn("Fetch failed, using mock data");
     }
 
@@ -59,7 +59,7 @@ async function runVerification() {
     try {
         const latest = await getGame();
         if (latest) targetId = latest.numero;
-    } catch (e) {
+    } catch {
         console.warn("Could not get latest game, using default target 3592");
     }
 

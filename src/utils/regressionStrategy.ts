@@ -99,8 +99,6 @@ export const generateRegressionGame = (
     // Actually, we simulate "past" predictions.
     // Let's predict games from index 1 to 50 (using data from i+1 onwards)
 
-    let totalError = 0;
-
     for (let i = 1; i <= TRAINING_WINDOW; i++) {
       const targetGame = history[i]; // The game we want to predict result for
 
@@ -123,7 +121,6 @@ export const generateRegressionGame = (
 
         // Error (Difference)
         const error = predictedProb - actual;
-        totalError += Math.abs(error);
 
         // Update Weights (Gradient Descent)
         // w = w - alpha * error * feature
