@@ -107,6 +107,7 @@ export const extremesDistribution = (history: LotofacilResult[]) => {
   const minCount = new Map<number, number>();
   const maxCount = new Map<number, number>();
   history.forEach((g) => {
+    if (!g || !g.listaDezenas || g.listaDezenas.length === 0) return;
     const s = [...g.listaDezenas].sort((a, b) => a - b);
     const lo = s[0];
     const hi = s[s.length - 1];
