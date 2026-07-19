@@ -94,7 +94,6 @@ describe('real-data backtest', () => {
       }
 
       let completedSims = 0;
-      let completedSims = 0;
       for (let i = 0; i < SIMS; i++) {
         const target = HISTORY[i];
         const train = HISTORY.slice(i + 1, i + 101);
