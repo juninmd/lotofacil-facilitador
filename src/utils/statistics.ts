@@ -251,7 +251,7 @@ export const backtestGame = (selection: number[], history: LotofacilResult[], be
     17: 476.00,
     18: 2856.00,
     19: 13566.00,
-    20: 38760.00
+    20: 54264.00
   };
   const costPerGame = prices[quantity] || 3.50;
 

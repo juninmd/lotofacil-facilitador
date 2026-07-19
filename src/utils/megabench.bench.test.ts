@@ -29,30 +29,6 @@ import { analyzeMarking, expectedHits, probAtLeast } from './probability';
 // Fora do CI. Rode: npm run test:backtest  (inclui *.bench.test.ts)
 // ---------------------------------------------------------------------------
 
-const API = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil';
-const parse = (d: { listaDezenas: (string | number)[] } & Record<string, unknown>): LotofacilResult => ({
-  ...(d as unknown as LotofacilResult),
-  listaDezenas: d.listaDezenas.map((x) => Number(x)),
-});
-const fetchGame = async (n?: number): Promise<LotofacilResult | null> => {
-  try {
-    const r = await fetch(n ? `${API}/${n}` : `${API}/`);
-    return r.ok ? parse(await r.json()) : null;
-  } catch {
-    return null;
-  }
-};
-const fetchHistory = async (count: number): Promise<LotofacilResult[]> => {
-  const latest = await fetchGame();
-  if (!latest) return [];
-  const games = [latest];
-  for (let i = 1; i < count; i++) {
-    const g = await fetchGame(latest.numero - i);
-    if (g) games.push(g);
-    if (i % 5 === 0) await new Promise((r) => setTimeout(r, 100));
-  }
-  return games.sort((a, b) => b.numero - a.numero);
-};
 
 const hits = (pick: number[], draw: number[]) => pick.filter((n) => draw.includes(n)).length;
 // PRNG determinístico p/ Monte Carlo reprodutível.

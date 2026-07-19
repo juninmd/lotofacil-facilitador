@@ -14,6 +14,25 @@ export interface LotofacilResult {
 
 const gameCache = new Map<number, Promise<LotofacilResult | null>>();
 
+// Persistent cache: sorteios concluídos são imutáveis, então guardamos em
+// localStorage para tornar recargas quase instantâneas (evita rebuscar a API).
+const LS_PREFIX = 'lf_game_';
+const readGameFromStorage = (n: number): LotofacilResult | null => {
+  try {
+    const raw = localStorage.getItem(LS_PREFIX + n);
+    return raw ? (JSON.parse(raw) as LotofacilResult) : null;
+  } catch {
+    return null;
+  }
+};
+const writeGameToStorage = (game: LotofacilResult): void => {
+  try {
+    localStorage.setItem(LS_PREFIX + game.numero, JSON.stringify(game));
+  } catch {
+    /* localStorage indisponível ou cheio — segue sem cache persistente */
+  }
+};
+
 // Helper for delay
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -21,6 +40,16 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
   // If a specific game number is requested and it's in the cache, return the cached promise
   if (gameNumber && gameCache.has(gameNumber)) {
     return gameCache.get(gameNumber)!;
+  }
+
+  // Tier persistente: se já temos este concurso salvo, evita a requisição.
+  if (gameNumber) {
+    const stored = readGameFromStorage(gameNumber);
+    if (stored) {
+      const storedPromise = Promise.resolve(stored);
+      gameCache.set(gameNumber, storedPromise);
+      return storedPromise;
+    }
   }
 
   const fetchPromise = (async () => {
@@ -51,6 +80,11 @@ export const getGame = async (gameNumber?: number): Promise<LotofacilResult | nu
         // If we fetched the latest game (gameNumber undefined), cache it now that we know the number
         if (!gameNumber && result.numero) {
            gameCache.set(result.numero, Promise.resolve(result));
+        }
+
+        // Persiste o concurso (imutável) para acelerar recargas futuras.
+        if (result.numero) {
+          writeGameToStorage(result);
         }
 
         return result;

@@ -568,7 +568,7 @@ function App() {
                  <label id="quantity-label" className="block text-sm font-medium text-gray-700 mb-2">Quantidade de Números na Aposta</label>
                  <div className="flex flex-wrap gap-2" role="group" aria-labelledby="quantity-label">
                     {[15, 16, 17, 18, 19, 20].map(q => {
-                        const prices: Record<number, string> = { 15: "R$ 3,50", 16: "R$ 56,00", 17: "R$ 476,00", 18: "R$ 2.856,00", 19: "R$ 13.566,00", 20: "R$ 38.760,00" };
+                        const prices: Record<number, string> = { 15: "R$ 3,50", 16: "R$ 56,00", 17: "R$ 476,00", 18: "R$ 2.856,00", 19: "R$ 13.566,00", 20: "R$ 54.264,00" };
                         return (
                             <button
                                 key={q}
