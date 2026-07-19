@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { loadHistory } from './loadHistory';
+import { loadHistory } from './loadHistory.bench';
 import { prizeOddsTable } from './prizeOdds';
 import { comb } from './probability';
 
