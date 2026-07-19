@@ -261,7 +261,6 @@ function App() {
               Último concurso: <strong className="text-gray-700">{latestGameResult.numero}</strong> · {latestGameResult.dataApuracao}
             </span>
           )}
-          )}
         </header>
 
         {loading && <p className="text-center text-violet-600 mb-4" role="status">Carregando dados da Lotofácil...</p>}
