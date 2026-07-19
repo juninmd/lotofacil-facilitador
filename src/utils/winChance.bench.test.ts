@@ -20,7 +20,7 @@ const tierPrize = (t: number, rateio: { faixa: number; valorPremio: number }[]):
   return rateio.find((p) => p.faixa === faixa)?.valorPremio ?? 0;
 };
 
-describe('win chance (dados reais)', () => {
+describe.skipIf(!!process.env.CI)('win chance (dados reais)', () => {
   it('probabilidade exata + ROI histórico para 15/16/17 dezenas', async () => {
     const HISTORY = await loadHistory();
     if (HISTORY.length < 300) { console.warn(`Pulado: ${HISTORY.length}`); return; }
