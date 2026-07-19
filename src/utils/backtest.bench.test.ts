@@ -93,6 +93,7 @@ describe('real-data backtest', () => {
         best[k] = 0;
       }
 
+      let completedSims = 0;
       for (let i = 0; i < SIMS; i++) {
         const target = HISTORY[i];
         const train = HISTORY.slice(i + 1, i + 101);
@@ -102,10 +103,11 @@ describe('real-data backtest', () => {
           totals[name] += h;
           if (h > best[name]) best[name] = h;
         }
+        completedSims++;
       }
 
       const rows = Object.keys(strategies)
-        .map((k) => ({ estrategia: k, mediaAcertos: +(totals[k] / SIMS).toFixed(3), melhor: best[k] }))
+        .map((k) => ({ estrategia: k, mediaAcertos: completedSims > 0 ? +(totals[k] / completedSims).toFixed(3) : 0, melhor: best[k] }))
         .sort((a, b) => b.mediaAcertos - a.mediaAcertos);
 
       console.log(`\n=== Backtest real: ${SIMS} sorteios (${HISTORY.length} jogos baixados) ===`);
