@@ -10,6 +10,8 @@ export interface LotofacilResult {
   listaDezenas: number[];
   dataApuracao: string;
   listaRateioPremio: LotofacilPremio[];
+  /** Dezenas na ordem em que foram sorteadas (quando disponível na fonte). */
+  ordemSorteio?: number[];
 }
 
 const gameCache = new Map<number, Promise<LotofacilResult | null>>();

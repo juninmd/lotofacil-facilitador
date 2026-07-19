@@ -24,6 +24,7 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const normalize = (d) => ({
   numero: Number(d.concurso ?? d.numero),
   listaDezenas: (d.dezenas ?? d.listaDezenas ?? []).map(Number).sort((a, b) => a - b),
+  ordemSorteio: (d.dezenasOrdemSorteio ?? d.ordemSorteio ?? []).map(Number),
   dataApuracao: d.data ?? d.dataApuracao ?? '',
   listaRateioPremio: (d.premiacoes ?? d.listaRateioPremio ?? []).map((p) => ({
     faixa: p.faixa,

@@ -27,3 +27,4 @@ walkforward-fixture.json
 *.njsproj
 *.sln
 *.sw?
+order-report.json
