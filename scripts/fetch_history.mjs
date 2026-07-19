@@ -48,11 +48,22 @@ const fromCaixa = async () => {
   if (!r0.ok) throw new Error(`HTTP ${r0.status} (latest)`);
   const latest = normalize(await r0.json());
   const games = [latest];
+  let consecutiveFailures = 0;
   for (let n = latest.numero - 1; n >= 1; n--) {
     try {
       const r = await fetch(`${CAIXA}/${n}`, { headers: HEADERS });
-      if (r.ok) games.push(normalize(await r.json()));
-    } catch { /* pula falha pontual */ }
+      if (r.ok) {
+        games.push(normalize(await r.json()));
+        consecutiveFailures = 0;
+      } else {
+        consecutiveFailures++;
+      }
+    } catch {
+      consecutiveFailures++;
+    }
+    if (consecutiveFailures > 20) {
+      throw new Error('Muitas falhas consecutivas na Caixa. Abortando.');
+    }
     if (n % 5 === 0) await sleep(120);
     if (n % 100 === 0) process.stdout.write(`  ${n}...\n`);
   }
