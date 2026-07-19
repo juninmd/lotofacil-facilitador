@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { LotofacilResult } from '../game';
+import { loadHistory } from './loadHistory';
 import {
   generateSmartGame,
   generateMarkovGame,
@@ -28,44 +28,15 @@ import { generatePatternGame } from './patternStrategy';
 // Fora do CI (rede + não-determinístico). Rode com: npm run test:backtest
 // ---------------------------------------------------------------------------
 
-const API = 'https://servicebus2.caixa.gov.br/portaldeloterias/api/lotofacil';
-
-const parse = (d: { listaDezenas: (string | number)[] } & Record<string, unknown>): LotofacilResult => ({
-  ...(d as unknown as LotofacilResult),
-  listaDezenas: d.listaDezenas.map((x) => Number(x)),
-});
-
-const fetchGame = async (n?: number): Promise<LotofacilResult | null> => {
-  try {
-    const r = await fetch(n ? `${API}/${n}` : `${API}/`);
-    if (!r.ok) return null;
-    return parse(await r.json());
-  } catch {
-    return null;
-  }
-};
-
-const fetchHistory = async (count: number): Promise<LotofacilResult[]> => {
-  const latest = await fetchGame();
-  if (!latest) return [];
-  const games: LotofacilResult[] = [latest];
-  for (let i = 1; i < count; i++) {
-    const g = await fetchGame(latest.numero - i);
-    if (g) games.push(g);
-    if (i % 5 === 0) await new Promise((res) => setTimeout(res, 120)); // gentle throttle
-  }
-  return games.sort((a, b) => b.numero - a.numero);
-};
-
 const hits = (pick: number[], draw: number[]) => pick.filter((n) => draw.includes(n)).length;
 
 describe('real-data backtest', () => {
   it(
     'reports average hits per strategy (expected ~9.0 = no edge)',
     async () => {
-      const HISTORY = await fetchHistory(160);
+      const HISTORY = (await loadHistory()).slice(0, 200);
       if (HISTORY.length < 130) {
-        console.warn(`Backtest skipped: only fetched ${HISTORY.length} games.`);
+        console.warn(`Backtest pulado: só ${HISTORY.length} concursos.`);
         return;
       }
 

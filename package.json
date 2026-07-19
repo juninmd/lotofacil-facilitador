@@ -11,6 +11,7 @@
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
     "test:backtest": "vitest run --config vitest.backtest.config.ts",
+    "data:update": "node scripts/fetch_history.mjs",
     "preview": "vite preview",
     "tailwind:init": "npx tailwindcss init -p"
   },

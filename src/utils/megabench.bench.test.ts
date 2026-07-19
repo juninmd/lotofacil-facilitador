@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { writeFileSync } from 'node:fs';
-import { getLatestGames, type LotofacilResult } from '../game';
+import type { LotofacilResult } from '../game';
+import { loadHistory } from './loadHistory';
 import {
   generateSmartGame,
   generateMarkovGame,
@@ -52,7 +53,7 @@ describe('mega-benchmark', () => {
   it(
     'testa milhares de possibilidades e elege a melhor forma de acertar mais',
     async () => {
-      const HISTORY = await getLatestGames(220);
+      const HISTORY = (await loadHistory()).slice(0, 400);
       if (HISTORY.length < 150) {
         console.warn(`Pulado: só ${HISTORY.length} jogos.`);
         return;
