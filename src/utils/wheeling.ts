@@ -25,15 +25,18 @@ export const combinations = <T>(arr: T[], k: number): T[][] => {
 };
 
 // Acertos de um jogo dado o conjunto de dezenas sorteadas.
-export const ticketHits = (ticket: number[], drawn: Set<number>): number =>
-  ticket.reduce((acc, n) => acc + (drawn.has(n) ? 1 : 0), 0);
+export const ticketHits = (ticket: number[], drawn: number[]): number => {
+  let count = 0;
+  for (let i = 0; i < ticket.length; i++) {
+    if (drawn.includes(ticket[i])) count++;
+  }
+  return count;
+};
 
-// Melhor resultado (mais acertos) entre todos os jogos, para um sorteio.
 export const bestTicketHits = (tickets: number[][], drawn: number[]): number => {
-  const set = new Set(drawn);
   let best = 0;
-  for (const t of tickets) {
-    const h = ticketHits(t, set);
+  for (let i = 0; i < tickets.length; i++) {
+    const h = ticketHits(tickets[i], drawn);
     if (h > best) best = h;
   }
   return best;
