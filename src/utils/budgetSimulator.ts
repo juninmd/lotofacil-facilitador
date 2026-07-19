@@ -26,9 +26,10 @@ const expectedPrizePer15 = (m: PrizeModel): number =>
 
 // Taxa de retorno esperada (ex.: -0,57 = perde 57% do que aposta). ~constante em k.
 export const expectedReturnRate = (dezenas: number, base = 3.5, m: PrizeModel = DEFAULT_PRIZES): number => {
-  const combos = ticketCost(dezenas, base) / base; // = C(k,15)
-  const expectedPrize = combos * expectedPrizePer15(m);
   const cost = ticketCost(dezenas, base);
+  if (cost <= 0) return -1;
+  const combos = cost / base;
+  const expectedPrize = combos * expectedPrizePer15(m);
   return expectedPrize / cost - 1;
 };
 
@@ -52,7 +53,7 @@ export const simulateBudget = (
   m: PrizeModel = DEFAULT_PRIZES,
 ): BudgetPlan => {
   const custo = ticketCost(dezenas, base);
-  const apostas = Math.floor(orcamento / custo);
+  const apostas = custo > 0 ? Math.floor(orcamento / custo) : 0;
   const p = probAtLeast(dezenas, 11);
   const p15 = probExactHits(dezenas, 15);
   const gasto = apostas * custo;
@@ -76,4 +77,7 @@ export const compareBudgetPlans = (
   orcamento: number,
   dezenasList: number[] = [15, 16, 17, 18],
   base = 3.5,
-): BudgetPlan[] => dezenasList.filter((k) => ticketCost(k, base) <= orcamento).map((k) => simulateBudget(orcamento, k, base));
+): BudgetPlan[] => dezenasList.filter((k) => {
+  const cost = ticketCost(k, base);
+  return cost > 0 && cost <= orcamento;
+}).map((k) => simulateBudget(orcamento, k, base));
