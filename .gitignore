@@ -28,3 +28,4 @@ walkforward-fixture.json
 *.sln
 *.sw?
 order-report.json
+optimized-report.json
