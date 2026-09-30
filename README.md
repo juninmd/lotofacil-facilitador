@@ -64,6 +64,18 @@ Aba **Monte Carlo** (`src/utils/mc/`):
   Isso aumenta o prêmio *condicional* a acertar — não a chance de acertar.
 - O retorno esperado por real continua negativo (~−57%): nenhum método prevê o sorteio.
 
+## Laboratório de fórmulas
+
+`src/utils/formulas/` testa **63 fórmulas** de escolha de dezenas (frequência, decaimento, atraso, Markov,
+Bayes, hazard, regressão logística online, KNN, dia da semana, vizinhança no volante, pares, ensembles,
+controles aleatórios) em walk-forward com Holm-Bonferroni. Resultado: **nenhuma supera o acaso**
+(4/63 com p<0,05 contra ≈3,2 esperado). Relatório completo: [`docs/FORMULAS.md`](docs/FORMULAS.md).
+
+O que funciona de verdade (mesmo custo, medido): jogos **espalhados** (+10 pp de P(≥1 prêmio) com 10 jogos)
+e **menos disputados** (+~6-8% de retorno esperado). Fórmula própria **REA** (`mc/expectedReturn.ts`):
+`REA = Σ P11..13·prêmio + P14·prêmio14/c + P15·pool·(1−e^{−λc})/(λc)`. Retorno segue negativo (≈ −60%);
+com jackpot acumulado sobe, sem nunca ficar positivo. "Rotação cíclica" (comum em sistemas) é *pior* que aleatório.
+
 ## Homologação & Testes
 
 O projeto usa **vitest**. Testes cobrem invariantes dos 14 geradores, funções

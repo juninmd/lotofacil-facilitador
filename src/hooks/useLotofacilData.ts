@@ -33,7 +33,13 @@ export const useLotofacilData = () => {
     const delays = [...calculateDelays(games).entries()]
       .sort((a, b) => b[1] - a[1])
       .map(([number, count]) => ({ number, count }));
-    return { frequency, delays, missingInCycle: getCycleMissingNumbers(games) };
+    // Concursos seguidos (mais recentes) sem ganhador de 15 acertos = jackpot acumulado.
+    let accumulated = 0;
+    for (const g of games) {
+      if (g.listaRateioPremio?.[0]?.numeroDeGanhadores !== 0) break;
+      accumulated++;
+    }
+    return { frequency, delays, missingInCycle: getCycleMissingNumbers(games), accumulated };
   }, [games]);
 
   return { games, latest: games[0] ?? null, loading, error, ...derived };

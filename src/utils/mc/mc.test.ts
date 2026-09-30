@@ -5,6 +5,8 @@ import { optimizePortfolio, randomPortfolio } from './portfolio';
 import { fitCrowdModel, crowdIndex, crowdBaseline, featuresOf } from './crowd';
 import { probAtLeast } from '../probability';
 import type { LotofacilResult } from '../../game';
+import { readFileSync } from 'node:fs';
+const history = JSON.parse(readFileSync('src/data/lotofacil-history.json', 'utf8')) as LotofacilResult[];
 
 describe('rng / máscaras', () => {
   it('é reprodutível com a mesma semente', () => {
@@ -82,5 +84,46 @@ describe('plano completo', () => {
     expect(plan.cost).toBeCloseTo(14);
     expect(plan.optimized.pAtLeast[11]).toBeGreaterThan(0.2);
     expect(plan.crowdIndexes.every((c) => c > 0)).toBe(true);
+  });
+});
+
+describe('fórmula REA (retorno esperado ajustado)', () => {
+  it('propriedades: monotonia, limite λ→0 e sempre negativo', async () => {
+    const { expectedReturn, crowdEdge, poolAfter } = await import('./expectedReturn');
+    const { probExactHits } = await import('../probability');
+    const m = { fixed: [7, 14, 35] as [number, number, number], prize14: 1700, pool15: 2.5e6, accumFactor: 1, lambda: 3, bet: 3.5 };
+    expect(expectedReturn(m, 0.7).perBet).toBeGreaterThan(expectedReturn(m, 1).perBet);
+    expect(expectedReturn(m, 1, 2).perBet).toBeGreaterThan(expectedReturn(m, 1, 0).perBet);
+    expect(crowdEdge(m, 0.78)).toBeGreaterThan(0.03);
+    expect(poolAfter(m, 2)).toBeCloseTo(7.5e6);
+    // sem co-ganhadores o jackpot inteiro é do apostador: P15 · pool
+    const alone = expectedReturn({ ...m, lambda: 1e-6 }, 1).jackpotPart;
+    expect(alone).toBeCloseTo(probExactHits(15, 15) * m.pool15, 3);
+    for (const c of [0.6, 1, 1.5]) for (const a of [0, 1, 2]) expect(expectedReturn(m, c, a).roi).toBeLessThan(0);
+  });
+  it('calibra com dados reais e reproduz o retorno esperado da ordem de −55% a −70%', async () => {
+    const { calibrateReturnModel, expectedReturn } = await import('./expectedReturn');
+    const rm = calibrateReturnModel(history);
+    expect(rm.fixed[0]).toBeGreaterThan(0);
+    const r = expectedReturn(rm, 1, 0).roi;
+    expect(r).toBeLessThan(-0.5);
+    expect(r).toBeGreaterThan(-0.75);
+  });
+});
+
+describe('métodos de construção de portfólio', () => {
+  it('todos devolvem N jogos válidos; guloso e MC superam o aleatório em cobertura; rotação perde', async () => {
+    const { PORTFOLIO_METHODS } = await import('./portfolioFormulas');
+    const test = makeDraws(60000, mulberry32(31));
+    const p11: Record<string, number> = {};
+    for (const m of PORTFOLIO_METHODS) {
+      const pf = m.build(8, 5);
+      expect(pf).toHaveLength(8);
+      pf.forEach((t) => { expect(new Set(t).size).toBe(15); expect(t.every((n) => n >= 1 && n <= 25)).toBe(true); });
+      p11[m.id] = evaluatePortfolio(pf, test).pAtLeast[11];
+    }
+    expect(p11.mc_cobertura).toBeGreaterThan(p11.aleatorio);
+    expect(p11.min_sobreposicao).toBeGreaterThan(p11.aleatorio - 0.005);
+    expect(p11.rotacao).toBeLessThan(p11.aleatorio);
   });
 });

@@ -21,7 +21,7 @@ function App() {
       {data.error && <p role="alert" className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-center text-sm text-rose-200">{data.error}</p>}
       <main>
         {tab === 'generator' && <GeneratorPanel games={data.games} disabled={data.loading || data.games.length === 0} />}
-        {tab === 'montecarlo' && <MonteCarloPanel />}
+        {tab === 'montecarlo' && <MonteCarloPanel accumulated={data.accumulated} />}
         {tab === 'stats' && <StatsPanel latest={data.latest} frequency={data.frequency} delays={data.delays} missingInCycle={data.missingInCycle} total={data.games.length} />}
         {tab === 'odds' && <OddsPanel />}
         {tab === 'search' && <SearchPanel />}

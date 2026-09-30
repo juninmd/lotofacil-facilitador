@@ -5,12 +5,13 @@ import { makeDraws, mulberry32 } from './rng';
 import { evaluatePortfolio, type PortfolioStats } from './simulate';
 import { ticketCost } from '../probability';
 import { combinations } from '../wheeling';
+import { calibrateReturnModel, expectedReturn, type ReturnModel } from './expectedReturn';
 
 // Orquestra o plano Monte Carlo completo: otimiza o portfólio (sorteios de
 // treino), mede o ganho em sorteios NOVOS (fora da amostra) contra portfólios
 // aleatórios e calcula o quão "menos disputado" é cada jogo.
 
-export interface PlanOptions { games: number; avoidCrowd: boolean; seed?: number }
+export interface PlanOptions { games: number; avoidCrowd: boolean; seed?: number; accumulated?: number }
 
 export interface McPlan {
   tickets: number[][];
@@ -21,13 +22,15 @@ export interface McPlan {
   testDraws: number;
   /** Mesmo custo (16 jogos = R$56) como aposta múltipla de 16 dezenas (prêmios agrupados em eventos raros). */
   multiBet16: PortfolioStats | null;
+  /** Retorno esperado ajustado (REA, R$/aposta) do portfólio vs um jogo típico, e após acúmulo. */
+  rea: { perBet: number; typical: number; edgePct: number; roiPct: number };
 }
 
-export interface CrowdContext { model: CrowdModel; baseline: number }
+export interface CrowdContext { model: CrowdModel; baseline: number; returns: ReturnModel }
 
 export const buildCrowdContext = (history: LotofacilResult[]): CrowdContext => {
   const model = fitCrowdModel(history);
-  return { model, baseline: crowdBaseline(model, history) };
+  return { model, baseline: crowdBaseline(model, history), returns: calibrateReturnModel(history) };
 };
 
 const TEST_DRAWS = 120_000;
@@ -53,9 +56,14 @@ export const buildPlan = (opts: PlanOptions, ctx: CrowdContext): McPlan => {
     meanBest: avg((s) => s.meanBest),
     expectedPrize: avg((s) => s.expectedPrize),
   };
+  const crowdIndexes = tickets.map((t) => crowdIndex(ctx.model, t, ctx.baseline));
+  const meanCrowd = crowdIndexes.reduce((a, b) => a + b, 0) / crowdIndexes.length;
+  const mine = expectedReturn(ctx.returns, meanCrowd, opts.accumulated ?? 0);
+  const typical = expectedReturn(ctx.returns, 1, opts.accumulated ?? 0).perBet;
   return {
     tickets,
-    crowdIndexes: tickets.map((t) => crowdIndex(ctx.model, t, ctx.baseline)),
+    crowdIndexes,
+    rea: { perBet: mine.perBet, typical, edgePct: typical > 0 ? (mine.perBet / typical - 1) * 100 : 0, roiPct: mine.roi * 100 },
     optimized,
     baseline,
     cost: opts.games * ticketCost(15),
