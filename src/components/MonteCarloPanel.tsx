@@ -2,10 +2,10 @@ import React, { useState } from 'react';
 import LotteryBall from '../LotteryBall';
 import { useCrowdContext } from '../hooks/useCrowdContext';
 import { buildPlan, type McPlan } from '../utils/mc/plan';
-import { formatBRL, formatInt, formatPct } from '../format';
+import { formatBRL, formatPct } from '../format';
 import { Callout, Card, Meter, Spinner, Stat } from './ui';
 
-const MonteCarloPanel: React.FC = () => {
+const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => {
   const { ctx, failed } = useCrowdContext(true);
   const [games, setGames] = useState(10);
   const [avoidCrowd, setAvoidCrowd] = useState(true);
@@ -16,7 +16,7 @@ const MonteCarloPanel: React.FC = () => {
     if (!ctx) return;
     setBusy(true);
     // setTimeout deixa o spinner pintar antes do cálculo (síncrono) começar.
-    setTimeout(() => { setPlan(buildPlan({ games, avoidCrowd }, ctx)); setBusy(false); }, 60);
+    setTimeout(() => { setPlan(buildPlan({ games, avoidCrowd, accumulated }, ctx)); setBusy(false); }, 60);
   };
 
   const gain = plan ? plan.optimized.pAtLeast[11] - plan.baseline.pAtLeast[11] : 0;
@@ -66,8 +66,13 @@ const MonteCarloPanel: React.FC = () => {
               <Stat label="Ganho medido" value={`+${(gain * 100).toFixed(1).replace('.', ',')} pp`} tone="gain" sub={`IC95% ±${(plan.optimized.seAny11 * 200).toFixed(2)} pp`} />
               <Stat label="Custo" value={formatBRL(plan.cost)} sub={`${plan.tickets.length} jogos de 15`} />
               <Stat label="Divisão do prêmio" value={crowdAvg < 1 ? `−${Math.round((1 - crowdAvg) * 100)}%` : '≈ igual'} tone={crowdAvg < 1 ? 'gain' : 'default'} sub="co-ganhadores previstos" />
-              <Stat label="Sorteios simulados" value={formatInt(plan.testDraws)} sub="fora da amostra" />
+              <Stat label="Retorno esperado" value={`R$ ${plan.rea.perBet.toFixed(2).replace('.', ',')}`} tone={plan.rea.edgePct > 0 ? 'gain' : 'default'} sub={`por aposta de R$ 3,50 · ${plan.rea.edgePct >= 0 ? '+' : ''}${plan.rea.edgePct.toFixed(1).replace('.', ',')}% vs típico`} />
             </div>
+            <div className="mt-3"><Callout tone={accumulated > 0 ? 'info' : 'warn'}>
+              {accumulated > 0
+                ? `O último concurso acumulou (${accumulated}×): o jackpot está maior, então o retorno esperado hoje é mais alto (${plan.rea.roiPct.toFixed(0)}% em vez de cerca de −60%). Ainda negativo.`
+                : `Sem acúmulo: retorno esperado ≈ ${plan.rea.roiPct.toFixed(0)}%. Quando o jackpot acumula, ele sobe — mas nunca chega a positivo.`}
+            </Callout></div>
             <div className="mt-4 grid grid-cols-5 gap-2 text-center text-xs">
               {[11, 12, 13, 14, 15].map((k) => (
                 <div key={k} className="rounded-xl border border-white/10 bg-white/[0.04] py-2">
@@ -99,7 +104,7 @@ const MonteCarloPanel: React.FC = () => {
               ))}
             </ol>
             <div className="mt-4"><Callout tone="warn">
-              Honestidade matemática: o retorno esperado por real apostado continua negativo (a Caixa retém ~57%). O otimizador
+              Honestidade matemática: o retorno esperado por real apostado continua negativo (≈ −57% a −65%). O otimizador
               aumenta a <strong>frequência</strong> de prêmios pequenos e a fatia dos grandes — não prevê o sorteio.
             </Callout></div>
           </Card>
