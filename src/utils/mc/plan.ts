@@ -1,0 +1,60 @@
+import type { LotofacilResult } from '../../game';
+import { crowdBaseline, crowdIndex, fitCrowdModel, type CrowdModel } from './crowd';
+import { optimizePortfolio, randomPortfolio } from './portfolio';
+import { makeDraws, mulberry32 } from './rng';
+import { evaluatePortfolio, type PortfolioStats } from './simulate';
+import { ticketCost } from '../probability';
+
+// Orquestra o plano Monte Carlo completo: otimiza o portfólio (sorteios de
+// treino), mede o ganho em sorteios NOVOS (fora da amostra) contra portfólios
+// aleatórios e calcula o quão "menos disputado" é cada jogo.
+
+export interface PlanOptions { games: number; avoidCrowd: boolean; seed?: number }
+
+export interface McPlan {
+  tickets: number[][];
+  crowdIndexes: number[]; // 1 = jogo típico; <1 = menos disputado
+  optimized: PortfolioStats;
+  baseline: PortfolioStats;
+  cost: number;
+  testDraws: number;
+}
+
+export interface CrowdContext { model: CrowdModel; baseline: number }
+
+export const buildCrowdContext = (history: LotofacilResult[]): CrowdContext => {
+  const model = fitCrowdModel(history);
+  return { model, baseline: crowdBaseline(model, history) };
+};
+
+const TEST_DRAWS = 120_000;
+const BASELINE_RUNS = 4;
+
+export const buildPlan = (opts: PlanOptions, ctx: CrowdContext): McPlan => {
+  const seed = opts.seed ?? Date.now() % 100000;
+  const tickets = optimizePortfolio({
+    games: opts.games,
+    seed,
+    trainDraws: 6000,
+    iterations: 2500,
+    crowd: opts.avoidCrowd ? { ...ctx, maxIndex: 0.9 } : undefined,
+  });
+  const test = makeDraws(TEST_DRAWS, mulberry32(seed ^ 0x9e3779b9));
+  const optimized = evaluatePortfolio(tickets, test);
+  const runs = Array.from({ length: BASELINE_RUNS }, (_, k) => evaluatePortfolio(randomPortfolio(opts.games, 15, mulberry32(seed + k + 1)), test));
+  const avg = (f: (s: PortfolioStats) => number) => runs.reduce((a, s) => a + f(s), 0) / runs.length;
+  const baseline: PortfolioStats = {
+    ...runs[0],
+    pAtLeast: Object.fromEntries([11, 12, 13, 14, 15].map((k) => [k, avg((s) => s.pAtLeast[k])])),
+    meanBest: avg((s) => s.meanBest),
+    expectedPrize: avg((s) => s.expectedPrize),
+  };
+  return {
+    tickets,
+    crowdIndexes: tickets.map((t) => crowdIndex(ctx.model, t, ctx.baseline)),
+    optimized,
+    baseline,
+    cost: opts.games * ticketCost(15),
+    testDraws: TEST_DRAWS,
+  };
+};

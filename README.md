@@ -50,6 +50,19 @@ O aplicativo estará disponível em `http://localhost:5173` (ou outra porta disp
 *   Análise de padrões (pares/ímpares, repetidos, etc.).
 *   Histórico de jogos.
 
+## Monte Carlo & jogos menos disputados
+
+Aba **Monte Carlo** (`src/utils/mc/`):
+
+- **Portfólio otimizado**: busca local sobre sorteios simulados (números aleatórios
+  comuns) escolhe jogos com pouca sobreposição. Medido em 400 mil sorteios *fora da
+  amostra*: P(≥1 prêmio) sobe de 42,5→49,4% (5 jogos), 68,5→77,6% (10) e 89,7→96,5% (20).
+- **Modelo de multidão**: regressão de Poisson nos rateios reais (ganhadores de 14/15
+  por concurso) mostra quais formatos de jogo são populares. Validado em hold-out
+  temporal: jogos previstos "menos disputados" têm ~40% menos co-ganhadores no 14.
+  Isso aumenta o prêmio *condicional* a acertar — não a chance de acertar.
+- O retorno esperado por real continua negativo (~−57%): nenhum método prevê o sorteio.
+
 ## Homologação & Testes
 
 O projeto usa **vitest**. Testes cobrem invariantes dos 14 geradores, funções

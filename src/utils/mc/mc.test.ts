@@ -67,3 +67,20 @@ describe('modelo de multidão', () => {
     expect(crowdIndex(m, hist[0].listaDezenas, crowdBaseline(m, hist))).toBeGreaterThan(0);
   });
 });
+
+describe('plano completo', () => {
+  it('produz jogos, custo e métricas coerentes', async () => {
+    const { buildPlan, buildCrowdContext } = await import('./plan');
+    const rng = mulberry32(2);
+    const mkG = (n: number): LotofacilResult => ({
+      numero: n, listaDezenas: fromMask(randomMask(rng)), dataApuracao: '',
+      listaRateioPremio: [3, 500, 10000, 100000, 500000].map((w, i) => ({ faixa: i + 1, numeroDeGanhadores: w, valorPremio: 0, descricaoFaixa: '' })),
+    });
+    const ctx = buildCrowdContext(Array.from({ length: 80 }, (_, i) => mkG(i)));
+    const plan = buildPlan({ games: 4, avoidCrowd: true, seed: 3 }, ctx);
+    expect(plan.tickets).toHaveLength(4);
+    expect(plan.cost).toBeCloseTo(14);
+    expect(plan.optimized.pAtLeast[11]).toBeGreaterThan(0.2);
+    expect(plan.crowdIndexes.every((c) => c > 0)).toBe(true);
+  });
+});
