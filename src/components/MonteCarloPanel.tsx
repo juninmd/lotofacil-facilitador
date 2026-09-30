@@ -77,6 +77,15 @@ const MonteCarloPanel: React.FC = () => {
               ))}
             </div>
           </Card>
+          {plan.multiBet16 && (
+            <Card eyebrow="Mesmo custo" title="Espalhar 16 jogos × 1 aposta de 16 dezenas">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Stat label="16 jogos otimizados" value={formatPct(plan.optimized.pAtLeast[11])} tone="gain" sub={`≥14: ${formatPct(plan.optimized.pAtLeast[14], 3)}`} />
+                <Stat label="Aposta múltipla de 16" value={formatPct(plan.multiBet16.pAtLeast[11])} tone="warn" sub={`≥14: ${formatPct(plan.multiBet16.pAtLeast[14], 3)}`} />
+              </div>
+              <div className="mt-3"><Callout>Mesmo retorno esperado. Espalhar aumenta a chance de ganhar em todas as faixas; na aposta múltipla os prêmios vêm agrupados: eventos mais raros, porém vários prêmios de uma vez.</Callout></div>
+            </Card>
+          )}
           <Card eyebrow="Jogos" title={`${plan.tickets.length} apostas otimizadas`}>
             <ol className="grid gap-2.5">
               {plan.tickets.map((t, i) => (
