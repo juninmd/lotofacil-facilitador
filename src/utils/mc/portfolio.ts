@@ -1,5 +1,5 @@
 import { crowdIndex, type CrowdModel } from './crowd';
-import { makeDraws, mulberry32, popcount, randomMask, fromMask, toMask, type Rng } from './rng';
+import { makeDraws, makeWeightedDraws, mulberry32, popcount, randomMask, fromMask, toMask, type Rng } from './rng';
 
 // Otimizador de portfólio por Monte Carlo + busca local (hill climbing).
 //
@@ -13,6 +13,7 @@ export type Objective = 'coverage' | 'tiered';
 
 export interface OptimizeOptions {
   objective?: Objective;
+  logWeights?: ArrayLike<number>; // sorteios de treino sob viés estimado (VPE); padrão: uniforme
   restarts?: number; // reinícios independentes; fica o melhor
   annealing?: boolean; // aceita pioras pequenas no início (foge de ótimos locais)
   games: number; // quantos jogos no portfólio
@@ -46,7 +47,7 @@ const optimizeOnce = (opts: OptimizeOptions, seed: number): { tickets: number[][
   const D = opts.trainDraws ?? 6000;
   const tier = TIERS[opts.objective ?? 'coverage'];
   const rng = mulberry32(seed);
-  const draws = makeDraws(D, rng);
+  const draws = opts.logWeights ? makeWeightedDraws(D, rng, opts.logWeights) : makeDraws(D, rng);
   const ok = (t: number[]): boolean =>
     !opts.crowd || crowdIndex(opts.crowd.model, t, opts.crowd.baseline) <= opts.crowd.maxIndex;
 

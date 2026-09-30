@@ -1,17 +1,18 @@
 import type { LotofacilResult } from '../../game';
 import { crowdBaseline, crowdIndex, fitCrowdModel, type CrowdModel } from './crowd';
 import { optimizePortfolio, randomPortfolio } from './portfolio';
-import { makeDraws, mulberry32 } from './rng';
+import { makeDraws, makeWeightedDraws, mulberry32 } from './rng';
 import { evaluatePortfolio, type PortfolioStats } from './simulate';
 import { ticketCost } from '../probability';
 import { combinations } from '../wheeling';
 import { calibrateReturnModel, expectedReturn, type ReturnModel } from './expectedReturn';
+import { estimateBias, expectedHitsUnder, topByBias, type BiasModel } from '../bias/biasModel';
 
 // Orquestra o plano Monte Carlo completo: otimiza o portfólio (sorteios de
 // treino), mede o ganho em sorteios NOVOS (fora da amostra) contra portfólios
 // aleatórios e calcula o quão "menos disputado" é cada jogo.
 
-export interface PlanOptions { games: number; avoidCrowd: boolean; seed?: number; accumulated?: number }
+export interface PlanOptions { games: number; avoidCrowd: boolean; seed?: number; accumulated?: number; useBias?: boolean }
 
 export interface McPlan {
   tickets: number[][];
@@ -23,14 +24,18 @@ export interface McPlan {
   /** Mesmo custo (16 jogos = R$56) como aposta múltipla de 16 dezenas (prêmios agrupados em eventos raros). */
   multiBet16: PortfolioStats | null;
   /** Retorno esperado ajustado (REA, R$/aposta) do portfólio vs um jogo típico, e após acúmulo. */
+  /** Retorno esperado ajustado (REA, R$/aposta) do portfólio vs um jogo típico, e após acúmulo. */
   rea: { perBet: number; typical: number; edgePct: number; roiPct: number };
+  /** Viés persistente (VPE): acertos esperados/jogo do portfólio sob o modelo (9,00 = uniforme) e melhor jogo único. */
+  vpe: { used: boolean; hitsPerTicket: number; sigmaPP: number; single: number[]; pSingleModel: number; pSingleUniform: number };
 }
 
-export interface CrowdContext { model: CrowdModel; baseline: number; returns: ReturnModel }
+export interface CrowdContext { model: CrowdModel; baseline: number; returns: ReturnModel; bias: BiasModel }
 
 export const buildCrowdContext = (history: LotofacilResult[]): CrowdContext => {
   const model = fitCrowdModel(history);
-  return { model, baseline: crowdBaseline(model, history), returns: calibrateReturnModel(history) };
+  return { model, baseline: crowdBaseline(model, history), returns: calibrateReturnModel(history),
+    bias: estimateBias([...history].sort((a, b) => a.numero - b.numero).map((g) => g.listaDezenas)) };
 };
 
 const TEST_DRAWS = 120_000;
@@ -45,7 +50,10 @@ export const buildPlan = (opts: PlanOptions, ctx: CrowdContext): McPlan => {
     iterations: 8000,
     annealing: true,
     crowd: opts.avoidCrowd ? { ...ctx, maxIndex: 0.9 } : undefined,
+    logWeights: opts.useBias === false ? undefined : ctx.bias.logW,
   });
+  const single = topByBias(ctx.bias);
+  const pSingle = (d: Int32Array) => evaluatePortfolio([single], d).pAtLeast[11];
   const test = makeDraws(TEST_DRAWS, mulberry32(seed ^ 0x9e3779b9));
   const optimized = evaluatePortfolio(tickets, test);
   const runs = Array.from({ length: BASELINE_RUNS }, (_, k) => evaluatePortfolio(randomPortfolio(opts.games, 15, mulberry32(seed + k + 1)), test));
@@ -63,6 +71,13 @@ export const buildPlan = (opts: PlanOptions, ctx: CrowdContext): McPlan => {
   return {
     tickets,
     crowdIndexes,
+    vpe: {
+      used: opts.useBias !== false,
+      hitsPerTicket: tickets.reduce((a, t) => a + expectedHitsUnder(ctx.bias, t), 0) / tickets.length,
+      sigmaPP: ctx.bias.sigmaB * 100, single,
+      pSingleModel: pSingle(makeWeightedDraws(100_000, mulberry32(seed + 5), ctx.bias.logW)),
+      pSingleUniform: pSingle(makeDraws(100_000, mulberry32(seed + 6))),
+    },
     rea: { perBet: mine.perBet, typical, edgePct: typical > 0 ? (mine.perBet / typical - 1) * 100 : 0, roiPct: mine.roi * 100 },
     optimized,
     baseline,

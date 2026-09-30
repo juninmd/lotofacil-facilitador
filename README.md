@@ -64,6 +64,16 @@ Aba **Monte Carlo** (`src/utils/mc/`):
   Isso aumenta o prêmio *condicional* a acertar — não a chance de acertar.
 - O retorno esperado por real continua negativo (~−57%): nenhum método prevê o sorteio.
 
+## Perícia estatística e a fórmula VPE
+
+`src/utils/forensics/` roda uma bateria de ~50 testes (frequências, pares, trios, dependência entre concursos,
+ordem de saída das bolas, calendário, espectro, deriva, duplicatas, modelo de aprendizado grande) com p-valores exatos por
+Monte Carlo. **Descoberta:** as dezenas têm um viés **real e persistente de ~±1 pp** (única coisa que sobrevive a Bonferroni;
+correlação 0,48 entre metades do histórico). Tudo o mais é compatível com sorteio uniforme. A fórmula **VPE** (Bayes empírico,
+`src/utils/bias/`) estima esse viés sem hiperparâmetros e vale ≈ +0,05 a +0,08 acertos/jogo (+~1 pp de P(≥11) por jogo);
+combinada com o otimizador Monte Carlo, 10 jogos chegam a 78% de P(≥1 prêmio) em concursos reais fora da amostra.
+Relatório completo, teste de poder e limites: [`docs/FORENSE.md`](docs/FORENSE.md).
+
 ## Laboratório de fórmulas
 
 `src/utils/formulas/` testa **63 fórmulas** de escolha de dezenas (frequência, decaimento, atraso, Markov,

@@ -4,11 +4,13 @@ import { useCrowdContext } from '../hooks/useCrowdContext';
 import { buildPlan, type McPlan } from '../utils/mc/plan';
 import { formatBRL, formatPct } from '../format';
 import { Callout, Card, Meter, Spinner, Stat } from './ui';
+import BiasCard from './BiasCard';
 
 const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => {
   const { ctx, failed } = useCrowdContext(true);
   const [games, setGames] = useState(10);
   const [avoidCrowd, setAvoidCrowd] = useState(true);
+  const [useBias, setUseBias] = useState(true);
   const [busy, setBusy] = useState(false);
   const [plan, setPlan] = useState<McPlan | null>(null);
 
@@ -16,7 +18,7 @@ const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => 
     if (!ctx) return;
     setBusy(true);
     // setTimeout deixa o spinner pintar antes do cálculo (síncrono) começar.
-    setTimeout(() => { setPlan(buildPlan({ games, avoidCrowd, accumulated }, ctx)); setBusy(false); }, 60);
+    setTimeout(() => { setPlan(buildPlan({ games, avoidCrowd, accumulated, useBias }, ctx)); setBusy(false); }, 60);
   };
 
   const gain = plan ? plan.optimized.pAtLeast[11] - plan.baseline.pAtLeast[11] : 0;
@@ -37,11 +39,18 @@ const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => 
             </label>
             <input id="mc-games" type="range" min={2} max={40} value={games} onChange={(e) => setGames(+e.target.value)} className="w-full accent-violet-500" />
           </div>
-          <label className="chip flex cursor-pointer items-center gap-3 rounded-xl px-4 py-3" aria-pressed={avoidCrowd}>
-            <input type="checkbox" checked={avoidCrowd} onChange={(e) => setAvoidCrowd(e.target.checked)} className="h-4 w-4 accent-violet-500" />
-            <span><span className="block text-sm font-semibold text-white">Evitar jogos populares</span>
-              <span className="block text-[11px] text-white/55">Modelo de Poisson ajustado nos rateios reais</span></span>
-          </label>
+          <div className="grid gap-2">
+            <label className="chip flex cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5" aria-pressed={avoidCrowd}>
+              <input type="checkbox" checked={avoidCrowd} onChange={(e) => setAvoidCrowd(e.target.checked)} className="h-4 w-4 accent-violet-500" />
+              <span><span className="block text-sm font-semibold text-white">Evitar jogos populares</span>
+                <span className="block text-[11px] text-white/55">Poisson nos rateios reais</span></span>
+            </label>
+            <label className="chip flex cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5" aria-pressed={useBias}>
+              <input type="checkbox" checked={useBias} onChange={(e) => setUseBias(e.target.checked)} className="h-4 w-4 accent-violet-500" />
+              <span><span className="block text-sm font-semibold text-white">Usar viés persistente (VPE)</span>
+                <span className="block text-[11px] text-white/55">Bayes empírico sobre 3.738 concursos</span></span>
+            </label>
+          </div>
         </div>
         <button onClick={run} disabled={!ctx || busy} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold text-white">
           {busy ? <><Spinner /> Simulando 126 mil sorteios…</> : !ctx && !failed ? <><Spinner /> Carregando histórico…</> : '🎲 Otimizar portfólio'}
@@ -82,6 +91,7 @@ const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => 
               ))}
             </div>
           </Card>
+          <BiasCard bias={ctx!.bias} plan={plan} />
           {plan.multiBet16 && (
             <Card eyebrow="Mesmo custo" title="Espalhar 16 jogos × 1 aposta de 16 dezenas">
               <div className="grid gap-3 sm:grid-cols-2">
