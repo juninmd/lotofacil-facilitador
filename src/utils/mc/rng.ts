@@ -47,3 +47,25 @@ export const makeDraws = (count: number, rng: Rng): Int32Array => {
   for (let i = 0; i < count; i++) draws[i] = randomMask(rng);
   return draws;
 };
+
+const gumbel = (rng: Rng): number => -Math.log(-Math.log(Math.max(1e-12, rng())));
+
+/**
+ * Sorteios de 15 entre 25 com pesos log-lineares `logW` (Gumbel-top-k = amostragem
+ * sucessiva ponderada). Com logW = 0 equivale ao sorteio uniforme.
+ */
+export const makeWeightedDraws = (count: number, rng: Rng, logW: ArrayLike<number>): Int32Array => {
+  const draws = new Int32Array(count);
+  const key = new Float64Array(25); const idx = new Int32Array(25);
+  for (let i = 0; i < count; i++) {
+    for (let n = 0; n < 25; n++) { key[n] = logW[n] + gumbel(rng); idx[n] = n; }
+    // seleção parcial dos 15 maiores
+    for (let a = 0; a < 15; a++) {
+      let best = a;
+      for (let b = a + 1; b < 25; b++) if (key[idx[b]] > key[idx[best]]) best = b;
+      const tmp = idx[a]; idx[a] = idx[best]; idx[best] = tmp;
+      draws[i] |= 1 << idx[a];
+    }
+  }
+  return draws;
+};

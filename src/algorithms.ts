@@ -12,11 +12,12 @@ import { generateXGBoostGame } from './utils/xgbStrategy';
 import { generateQLearningGame } from './utils/qLearningStrategy';
 import { generateBiLstmGame } from './utils/biLstmStrategy';
 import { generateOptimizedGame } from './utils/optimizedGenerator';
+import { estimateBias, topByBias } from './utils/bias/biasModel';
 
 // Registro único dos geradores (DRY): a UI itera sobre esta lista em vez de
 // repetir um bloco de JSX por algoritmo.
 export type AlgorithmId =
-  | 'smart' | 'optimized' | 'consensus' | 'max15' | 'knn' | 'genetic' | 'markov' | 'tensorflow'
+  | 'vpe' | 'smart' | 'optimized' | 'consensus' | 'max15' | 'knn' | 'genetic' | 'markov' | 'tensorflow'
   | 'regression' | 'neuralNet' | 'randomForest' | 'pattern' | 'bayesian' | 'gradientBoosting'
   | 'xgboost' | 'qlearning' | 'bilstm';
 
@@ -28,7 +29,13 @@ export interface Algorithm {
   run: (history: LotofacilResult[], quantity: number) => number[] | Promise<number[]>;
 }
 
+// VPE usa o histórico COMPLETO (viés é sutil: precisa de milhares de concursos), carregado sob demanda.
+let vpeModel: Promise<ReturnType<typeof estimateBias>> | null = null;
+const loadVpe = () => (vpeModel ??= import('./data/lotofacil-history.json').then((m) =>
+  estimateBias([...(m.default as unknown as LotofacilResult[])].sort((a, b) => a.numero - b.numero).map((g) => g.listaDezenas))));
+
 export const ALGORITHMS: Algorithm[] = [
+  { id: 'vpe', label: 'VPE (viés persistente)', hint: 'Bayes empírico, único com evidência', group: 'Estatístico', run: async (_h, q) => topByBias(await loadVpe(), q) },
   { id: 'smart', label: 'Smart', hint: 'Gaussiana e pesos', group: 'Estatístico', run: (h, q) => generateSmartGame(h, undefined, q) },
   { id: 'optimized', label: 'Padrões reais', hint: 'Filtra pelos limites empíricos', group: 'Estatístico', run: (h, q) => generateOptimizedGame(h, q) },
   { id: 'consensus', label: 'Consenso', hint: 'União ponderada dos melhores', group: 'Estatístico', run: (h, q) => generateConsensusGame(h, q) },
