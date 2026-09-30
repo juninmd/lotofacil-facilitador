@@ -55,8 +55,9 @@ O aplicativo estará disponível em `http://localhost:5173` (ou outra porta disp
 Aba **Monte Carlo** (`src/utils/mc/`):
 
 - **Portfólio otimizado**: busca local sobre sorteios simulados (números aleatórios
-  comuns) escolhe jogos com pouca sobreposição. Medido em 400 mil sorteios *fora da
-  amostra*: P(≥1 prêmio) sobe de 42,5→49,4% (5 jogos), 68,5→77,6% (10) e 89,7→96,5% (20).
+  comuns) escolhe jogos com pouca sobreposição. Recozimento simulado + troca de dezenas. Medido em 300 mil
+  sorteios *fora da amostra*: P(≥1 prêmio) sobe de 43,5→49,4% (5 jogos), 67,1→77,4% (10) e 89,8→96,1% (20).
+  Relatório completo em [`docs/HOMOLOGACAO.md`](docs/HOMOLOGACAO.md).
 - **Modelo de multidão**: regressão de Poisson nos rateios reais (ganhadores de 14/15
   por concurso) mostra quais formatos de jogo são populares. Validado em hold-out
   temporal: jogos previstos "menos disputados" têm ~40% menos co-ganhadores no 14.

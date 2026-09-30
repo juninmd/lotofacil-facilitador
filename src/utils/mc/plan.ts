@@ -4,6 +4,7 @@ import { optimizePortfolio, randomPortfolio } from './portfolio';
 import { makeDraws, mulberry32 } from './rng';
 import { evaluatePortfolio, type PortfolioStats } from './simulate';
 import { ticketCost } from '../probability';
+import { combinations } from '../wheeling';
 
 // Orquestra o plano Monte Carlo completo: otimiza o portfólio (sorteios de
 // treino), mede o ganho em sorteios NOVOS (fora da amostra) contra portfólios
@@ -18,6 +19,8 @@ export interface McPlan {
   baseline: PortfolioStats;
   cost: number;
   testDraws: number;
+  /** Mesmo custo (16 jogos = R$56) como aposta múltipla de 16 dezenas (prêmios agrupados em eventos raros). */
+  multiBet16: PortfolioStats | null;
 }
 
 export interface CrowdContext { model: CrowdModel; baseline: number }
@@ -36,7 +39,8 @@ export const buildPlan = (opts: PlanOptions, ctx: CrowdContext): McPlan => {
     games: opts.games,
     seed,
     trainDraws: 6000,
-    iterations: 2500,
+    iterations: 8000,
+    annealing: true,
     crowd: opts.avoidCrowd ? { ...ctx, maxIndex: 0.9 } : undefined,
   });
   const test = makeDraws(TEST_DRAWS, mulberry32(seed ^ 0x9e3779b9));
@@ -56,5 +60,6 @@ export const buildPlan = (opts: PlanOptions, ctx: CrowdContext): McPlan => {
     baseline,
     cost: opts.games * ticketCost(15),
     testDraws: TEST_DRAWS,
+    multiBet16: opts.games === 16 ? evaluatePortfolio(combinations(Array.from({ length: 16 }, (_, i) => i + 1), 15), test) : null,
   };
 };
