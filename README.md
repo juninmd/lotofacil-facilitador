@@ -64,6 +64,13 @@ Aba **Monte Carlo** (`src/utils/mc/`):
   Isso aumenta o prêmio *condicional* a acertar — não a chance de acertar.
 - O retorno esperado por real continua negativo (~−57%): nenhum método prevê o sorteio.
 
+## Loterias internacionais (sem dados brasileiros)
+
+`src/utils/intl/` aplica a mesma perícia e a fórmula VPE a qualquer loteria *k de n* (Powerball 5/69, Mega Millions 5/70,
+NY Lotto 6/59, Take 5, Cash4Life). Baixe os históricos públicos com `node scripts/fetch_intl.mjs` (requer acesso a
+`data.ny.gov`) e rode `npx vitest run --config vitest.backtest.config.ts src/utils/intl` para gerar `docs/INTERNACIONAL.md`.
+Validado em mundos sintéticos: sem viés nada é sinalizado; com viés injetado a frequência, a persistência e o VPE detectam.
+
 ## Perícia estatística e a fórmula VPE
 
 `src/utils/forensics/` roda uma bateria de ~50 testes (frequências, pares, trios, dependência entre concursos,
