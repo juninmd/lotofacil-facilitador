@@ -73,3 +73,15 @@ These guidelines outline the principles and expectations for all AI coding agent
 
 
 These guidelines are intended to serve as a foundation for the AGENTS.md project.  Continuous refinement and adaptation are encouraged based on feedback and evolving project requirements.  All development efforts must prioritize quality, maintainability, and the successful implementation of the AI agent's core functionality.
+
+<!-- base-actions-main-policy -->
+## GitHub Actions — padrão obrigatório (@main)
+
+- Referencie as actions internas sempre pelo branch, nunca por SHA:
+  - `uses: juninmd/base-actions/<action>@main`
+  - `uses: juninmd/base-actions/.github/workflows/<arquivo>.yml@main`
+- Não fixe `@<sha>` em `juninmd/base-actions`: a atualização é centralizada no
+  `main` e passa a valer no próximo run.
+- PRs cujos checks não iniciam por billing/spending limit são mesclados pelo bot central
+  `juninmd/base-actions/.github/workflows/auto-merge-billing-blocked.yml`.
+  Para impedir o merge automático de um PR, aplique a label `do-not-merge`.
