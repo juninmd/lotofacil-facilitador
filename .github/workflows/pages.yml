@@ -18,6 +18,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec vite build --base=/lotofacil-facilitador/
       - uses: actions/configure-pages@v5
+        with: { enablement: true }
       - uses: actions/upload-pages-artifact@v3
         with: { path: dist }
       - id: deployment
