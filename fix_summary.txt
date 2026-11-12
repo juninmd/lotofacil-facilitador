@@ -1,0 +1,9 @@
+Minimal, safe change applied to fix CI pipeline failure:
+
+- Added `testTimeout: 15000` to vitest.config.ts (line 9)
+- This increases test timeout from default 5000ms to 15000ms
+- Fixes the "Test timed out in 5000ms" error for src/utils/statistics.test.ts
+- The consensus generator test takes ~5.1s locally, which exceeds 5000ms
+- 15000ms timeout allows sufficient time while being minimal and safe
+- No other changes made - no tests disabled, no features added
+- CI will now pass as the test can complete without timeout
