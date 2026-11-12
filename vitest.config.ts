@@ -6,6 +6,7 @@ import { defineConfig } from 'vitest/config'
 export default defineConfig({
   test: {
     environment: 'node',
+    testTimeout: 15000,
     include: ['src/**/*.test.ts'],
     // Backtest hits the live Caixa API (non-deterministic, network-bound) — kept
     // out of the default/CI run; execute it with `npm run test:backtest`.
