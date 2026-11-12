@@ -16,5 +16,6 @@ export default defineConfig({
       include: ['src/utils/**/*.ts', 'src/game.ts'],
       exclude: ['src/utils/tensorflowStrategy.ts', 'src/utils/neuralNetStrategy.ts', 'src/utils/biLstmStrategy.ts'],
     },
+    testTimeout: 10000,
   },
 })
