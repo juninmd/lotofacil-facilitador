@@ -46,7 +46,7 @@ pnpm dev            # http://localhost:5173
 | `pnpm test:coverage` | Relatório de cobertura |
 | `pnpm test:backtest` | Backtest e benchmarks com dados reais da Caixa (fora do CI) |
 | `pnpm data:update` | Baixa o histórico completo para `src/data/lotofacil-history.json` (API comunitária, com fallback para a Caixa) |
-| `pnpm lint` | ESLint (hoje falha na inicialização: typescript-eslint ainda não suporta TypeScript 7) |
+| `pnpm lint` | ESLint (Requer atualização da configuração para suportar TypeScript 7) |
 
 ### Dados
 
@@ -54,7 +54,16 @@ O histórico fica versionado em `src/data/lotofacil-history.json`; `pnpm data:up
 
 ### Deploy
 
-Todo push na `master` publica no GitHub Pages (`.github/workflows/pages.yml`, `vite build --base=/lotofacil-facilitador/`).
+O deploy para produção roda automaticamente a cada push na branch `master`, publicando no GitHub Pages via o workflow `.github/workflows/pages.yml`. O `Vite` constrói o site com o caminho base `/lotofacil-facilitador/` (`vite build --base=/lotofacil-facilitador/`), que depois é publicado automaticamente pelo GitHub Actions.
+
+Para fazer o deploy manualmente:
+
+1. `pnpm build` — gera os arquivos em `dist/`
+2. `pnpm preview` — visualiza localmente o build antes de publicar
+
+O workflow `.github/workflows/pages.yml` cuida do restante: compila, comuta para a branch `gh-pages` e empurra os artefatos para o GitHub Pages.
+
+Também há um workflow de `auto-merge-billing-blocked.yml` que garante que os checks de spending limit não bloqueiem o merge automático dos PRs.
 
 ## Monte Carlo & jogos menos disputados
 
