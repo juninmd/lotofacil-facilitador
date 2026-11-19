@@ -1,54 +1,60 @@
 # Lotofácil Facilitador
 
-Este projeto é uma aplicação web desenvolvida para auxiliar na geração e análise de números para a Lotofácil. Ele oferece ferramentas para facilitar a escolha de dezenas, aumentando as chances de sucesso.
+Este projeto é uma aplicação web desenvolvida para auxiliar na geração e análise de números para a Lotofácil. Ele oferece geradores, análise estatística e simulação para escolher dezenas. Nenhum método prevê o sorteio (veja [A verdade matemática](#a-verdade-matemática-leia-antes-de-apostar)).
 
-## Tecnologias Utilizadas
+> **App:** https://juninmd.github.io/lotofacil-facilitador/
 
-*   **React**: Biblioteca JavaScript para construção de interfaces de usuário.
-*   **TypeScript**: Superset de JavaScript que adiciona tipagem estática.
-*   **Vite**: Ferramenta de build rápida para projetos web modernos.
-*   **Tailwind CSS**: Framework CSS utilitário para estilização rápida e responsiva.
-*   **pnpm**: Gerenciador de pacotes rápido e eficiente.
+![Gerador](docs/screenshots/depois-gerador.png)
 
-## Como Rodar o Projeto
+## Abas
 
-Para configurar e rodar o projeto localmente, siga os passos abaixo:
+| Aba | O que faz |
+|---|---|
+| ✨ Gerador | Gera jogos com 14 estratégias (heurísticas, Markov, ML, genético, ensemble) e desdobramento |
+| 🎲 Monte Carlo | Portfólio de jogos com pouca sobreposição e jogos "menos disputados" |
+| 📊 Estatísticas | Frequência, atrasos e dezenas faltantes no ciclo, com o último concurso |
+| 🧮 Chances | Probabilidade exata (hipergeométrica) e custo por quantidade de dezenas marcadas |
+| 🔎 Concursos | Busca de concursos anteriores |
 
-### Pré-requisitos
+| Estatísticas | Monte Carlo | Mobile |
+|---|---|---|
+| ![Estatísticas](docs/screenshots/depois-estatisticas.png) | ![Monte Carlo](docs/screenshots/depois-montecarlo.png) | ![Mobile](docs/screenshots/depois-mobile.png) |
 
-Certifique-se de ter o Node.js (versão 18 ou superior) e o pnpm instalados em sua máquina.
+## Tecnologias
 
-### Instalação
+React 19, TypeScript, Vite, Tailwind CSS 4, React-Bootstrap, TensorFlow.js (estratégias de ML), Vitest. Gerenciador de pacotes: **pnpm** (`pnpm-lock.yaml`).
 
-1.  Clone este repositório:
-    ```bash
-    git clone https://github.com/juninmd/lotofacil-facilitador.git
-    ```
-2.  Navegue até o diretório do projeto:
-    ```bash
-    cd lotofacil-facilitador
-    ```
-3.  Instale as dependências usando pnpm:
-    ```bash
-    pnpm install
-    ```
+## Como rodar
 
-### Execução
-
-Para iniciar o servidor de desenvolvimento:
+Requisitos: Node.js 22 (versão usada no deploy) e pnpm.
 
 ```bash
-pnpm dev
+git clone https://github.com/juninmd/lotofacil-facilitador.git
+cd lotofacil-facilitador
+pnpm install
+pnpm dev            # http://localhost:5173
 ```
 
-O aplicativo estará disponível em `http://localhost:5173` (ou outra porta disponível).
+### Scripts
 
-## Funcionalidades (Exemplos)
+| Comando | Uso |
+|---|---|
+| `pnpm dev` | Servidor de desenvolvimento (Vite) |
+| `pnpm build` | `tsc -b` + build de produção em `dist/` |
+| `pnpm preview` | Serve o build |
+| `pnpm test` | Suíte determinística (Vitest) |
+| `pnpm test:coverage` | Relatório de cobertura |
+| `pnpm test:backtest` | Backtest e benchmarks com dados reais da Caixa (fora do CI) |
+| `pnpm data:update` | Baixa o histórico completo para `src/data/lotofacil-history.json` (API comunitária, com fallback para a Caixa) |
+| `pnpm lint` | ESLint (hoje falha na inicialização: typescript-eslint ainda não suporta TypeScript 7) |
 
-*   Geração de combinações aleatórias.
-*   Seleção manual de dezenas.
-*   Análise de padrões (pares/ímpares, repetidos, etc.).
-*   Histórico de jogos.
+### Dados
+
+O histórico fica versionado em `src/data/lotofacil-history.json`; `pnpm data:update` o atualiza. Não há variáveis de ambiente obrigatórias.
+
+### Deploy
+
+Todo push na `master` publica no GitHub Pages (`.github/workflows/pages.yml`, `vite build --base=/lotofacil-facilitador/`).
 
 ## Monte Carlo & jogos menos disputados
 
