@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Header from './components/Header';
-import Tabs, { type TabId } from './components/Tabs';
+import Tabs, { panelDomId, tabDomId, type TabId } from './components/Tabs';
 import GeneratorPanel from './components/GeneratorPanel';
 import MonteCarloPanel from './components/MonteCarloPanel';
 import StatsPanel from './components/StatsPanel';
@@ -19,7 +19,7 @@ function App() {
       <Tabs active={tab} onChange={setTab} />
       {data.loading && <p role="status" className="mb-4 flex items-center justify-center gap-2 text-sm text-violet-300"><Spinner /> Carregando dados da Lotofácil…</p>}
       {data.error && <p role="alert" className="mb-4 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-center text-sm text-rose-200">{data.error}</p>}
-      <main>
+      <main id={panelDomId(tab)} role="tabpanel" aria-labelledby={tabDomId(tab)} tabIndex={0}>
         {tab === 'generator' && <GeneratorPanel games={data.games} disabled={data.loading || data.games.length === 0} />}
         {tab === 'montecarlo' && <MonteCarloPanel accumulated={data.accumulated} />}
         {tab === 'stats' && <StatsPanel latest={data.latest} frequency={data.frequency} delays={data.delays} missingInCycle={data.missingInCycle} total={data.games.length} />}
