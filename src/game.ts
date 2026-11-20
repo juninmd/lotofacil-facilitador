@@ -39,6 +39,11 @@ const writeGameToStorage = (game: LotofacilResult): void => {
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const getGame = async (gameNumber?: number): Promise<LotofacilResult | null> => {
+  // Concurso 0 (ou negativo/fracionário) não existe: sem esta guarda o `0`
+  // caía no ramo "último concurso" e a busca mostrava outro sorteio.
+  if (gameNumber !== undefined && (!Number.isInteger(gameNumber) || gameNumber < 1)) {
+    return null;
+  }
   // If a specific game number is requested and it's in the cache, return the cached promise
   if (gameNumber && gameCache.has(gameNumber)) {
     return gameCache.get(gameNumber)!;
