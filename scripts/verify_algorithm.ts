@@ -55,7 +55,7 @@ async function runVerification() {
     console.log("=== Lotofacil Algorithm Verification ===");
 
     // 1. Get Real Data
-    let history: LotofacilResult[] = [];
+    let history: LotofacilResult[];
     let target = TARGET_GAME;
 
     try {

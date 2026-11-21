@@ -395,7 +395,7 @@ export const scoreCandidate = (numbers: number[], stats: DynamicStats, previousG
     const scoreLine = gaussianScore(lineStdDev, stats.meanLineStdDev, stats.stdDevLineStdDev);
     const scoreCol = gaussianScore(colStdDev, stats.meanColStdDev, stats.stdDevColStdDev);
 
-    let scoreRepeats = 0;
+    let scoreRepeats: number;
     if (previousGameDezenas) {
         const repeatCount = numbers.filter(n => previousGameDezenas.includes(n)).length;
         scoreRepeats = gaussianScore(repeatCount, stats.meanRepeats, stats.stdDevRepeats);

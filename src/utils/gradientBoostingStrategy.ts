@@ -77,7 +77,7 @@ const extractFeatures = (
     const missing = missingNums.includes(number) ? 1.0 : 0.0;
 
     // 6. Momentum (Trend)
-    let momentum = 0;
+    let momentum: number;
     if (calculatedMomentum) {
         momentum = calculatedMomentum.get(number) || 0;
     } else {

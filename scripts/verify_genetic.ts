@@ -34,7 +34,7 @@ async function runVerification() {
     console.log("=== Lotofacil Genetic Algorithm Verification ===");
 
     // 1. Get Real Data
-    let history: LotofacilResult[] = [];
+    let history: LotofacilResult[];
     let target: LotofacilResult | null = null;
     const TARGET_ID = 3000; // Use a fixed past game
 

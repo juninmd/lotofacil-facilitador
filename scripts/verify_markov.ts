@@ -45,7 +45,7 @@ async function fetchLatestGames(count: number): Promise<LotofacilResult[]> {
 async function runVerification() {
     console.log("=== Markov Chain Algorithm Verification (Backtest) ===");
 
-    let history: LotofacilResult[] = [];
+    let history: LotofacilResult[];
     try {
         // Fetch 120 games to allow testing last 20 with 100 history each
         history = await fetchLatestGames(120);
