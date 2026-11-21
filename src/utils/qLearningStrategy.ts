@@ -36,7 +36,7 @@ const calculateState = (number: number, historySlice: LotofacilResult[]): QState
     if (!found) delay = historySlice.length;
 
     // Bucketize Delay
-    let recencyBucket = 0;
+    let recencyBucket: number;
     if (delay === 0) recencyBucket = 0;
     else if (delay === 1) recencyBucket = 1;
     else if (delay === 2) recencyBucket = 2;
@@ -95,7 +95,7 @@ export const generateQLearningGame = (history: LotofacilResult[], quantity: numb
             const qValues = getQValues(key);
 
             // Choose Action (Epsilon-Greedy)
-            let action = 0; // 0=Skip, 1=Pick
+            let action: number; // 0=Skip, 1=Pick
             if (Math.random() < EPSILON) {
                 action = Math.random() < 0.5 ? 0 : 1;
             } else {

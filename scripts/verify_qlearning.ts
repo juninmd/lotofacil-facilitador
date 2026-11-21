@@ -52,7 +52,7 @@ async function runVerification() {
     }
 
     // 2. Fetch History relative to Target
-    let history: LotofacilResult[] = [];
+    let history: LotofacilResult[];
     try {
         history = await fetchHistory(target.numero, 100);
         if (history.length < 50) {
