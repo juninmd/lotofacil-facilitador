@@ -1,5 +1,6 @@
 import type { LotofacilResult } from '../game';
 import { getCycleMissingNumbers } from './statistics';
+import { sampleK } from './mc/rng';
 
 // --- Types & Constants ---
 
@@ -111,7 +112,7 @@ class DecisionTree {
 
     // Random feature subset (sqrt of total features) for Random Forest variance
     // We have 7 features, let's check 3 random features at each node (sqrt(7) ~= 2.6 -> 3)
-    const featureIndices = [0, 1, 2, 3, 4, 5, 6].sort(() => 0.5 - Math.random()).slice(0, 3);
+    const featureIndices = sampleK([0, 1, 2, 3, 4, 5, 6], 3, Math.random);
 
     for (const featIdx of featureIndices) {
       // Check possible thresholds.

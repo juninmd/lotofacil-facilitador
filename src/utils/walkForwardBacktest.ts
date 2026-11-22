@@ -1,5 +1,6 @@
 import type { LotofacilResult } from '../game';
 import { mineHistory, withinLearnedBounds, type HistoryPatterns } from './patternMining';
+import { sampleK } from './mc/rng';
 
 // Backtest WALK-FORWARD (dinâmico, sem lookahead): para cada concurso-alvo,
 // treina APENAS com os concursos anteriores (janela expansível, "desde o nº 1")
@@ -132,9 +133,7 @@ export const walkForwardBacktest = (
       record(staticStats, staticPick.filter((n) => target.listaDezenas.includes(n)).length);
     }
 
-    const rand = Array.from({ length: 25 }, (_, k) => k + 1)
-      .sort(() => rnd() - 0.5)
-      .slice(0, quantity);
+    const rand = sampleK(Array.from({ length: 25 }, (_, k) => k + 1), quantity, rnd);
     record(random, rand.filter((n) => target.listaDezenas.includes(n)).length);
   }
 
