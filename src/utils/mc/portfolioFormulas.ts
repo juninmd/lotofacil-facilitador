@@ -1,6 +1,6 @@
 import { crowdIndex, type CrowdModel } from './crowd';
 import { optimizePortfolio, randomPortfolio } from './portfolio';
-import { mulberry32, popcount, toMask, type Rng } from './rng';
+import { mulberry32, popcount, sampleK, toMask, type Rng } from './rng';
 
 // Fórmulas de CONSTRUÇÃO de portfólio (mesmo custo = mesmo nº de jogos de 15).
 // Todas produzem N jogos; o harness mede P(>=k) em sorteios inéditos.
@@ -46,7 +46,7 @@ export const PORTFOLIO_METHODS: PortfolioMethod[] = [
   { id: 'rotacao', label: 'Rotação cíclica', build: (g) => rotation(g) },
   { id: 'balanceado', label: 'Balanceado (cada dezena igual)', build: (g, s) => balanced(g, mulberry32(s)) },
   { id: 'min_sobreposicao', label: 'Guloso mín. sobreposição', build: (g, s) => greedyMinOverlap(g, mulberry32(s)) },
-  { id: 'pool18', label: 'Sorteio dentro de pool de 18', build: (g, s) => { const r = mulberry32(s); const pool = [...ALL].sort(() => r() - 0.5).slice(0, 18); return Array.from({ length: g }, () => cand(r, pool)); } },
+  { id: 'pool18', label: 'Sorteio dentro de pool de 18', build: (g, s) => { const r = mulberry32(s); const pool = sampleK(ALL, 18, r); return Array.from({ length: g }, () => cand(r, pool)); } },
   { id: 'mc_cobertura', label: 'Monte Carlo (cobertura)', build: (g, s) => optimizePortfolio({ games: g, seed: s, iterations: 6000, annealing: true }) },
   { id: 'mc_faixas', label: 'Monte Carlo (placar por faixa)', build: (g, s) => optimizePortfolio({ games: g, seed: s, iterations: 6000, annealing: true, objective: 'tiered' }) },
   { id: 'mc_multidao', label: 'Monte Carlo + menos disputados', build: (g, s, c) => optimizePortfolio({ games: g, seed: s, iterations: 6000, annealing: true, crowd: c ? { ...c, maxIndex: 0.9 } : undefined }) },

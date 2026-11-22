@@ -42,6 +42,17 @@ export const randomMask = (rng: Rng, k = 15): number => {
   return mask;
 };
 
+/** `k` itens distintos e uniformes de `items` (Fisher-Yates parcial); não altera a entrada. */
+export const sampleK = <T,>(items: readonly T[], k: number, rng: Rng): T[] => {
+  const pool = [...items];
+  const m = Math.min(k, pool.length);
+  for (let i = 0; i < m; i++) {
+    const j = i + Math.floor(rng() * (pool.length - i));
+    [pool[i], pool[j]] = [pool[j], pool[i]];
+  }
+  return pool.slice(0, m);
+};
+
 export const makeDraws = (count: number, rng: Rng): Int32Array => {
   const draws = new Int32Array(count);
   for (let i = 0; i < count; i++) draws[i] = randomMask(rng);
