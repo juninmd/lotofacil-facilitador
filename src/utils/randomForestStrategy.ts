@@ -1,6 +1,7 @@
 import type { LotofacilResult } from '../game';
 import { getCycleMissingNumbers } from './statistics';
 import { sampleK } from './mc/rng';
+import { trainingWindow, frequencyFallback, MIN_TRAINING_ROWS } from './mlWindow';
 
 // --- Types & Constants ---
 
@@ -206,11 +207,8 @@ class RandomForest {
 
 export const generateRandomForestGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
     // 1. Gather Training Data
-    if (history.length < TRAINING_WINDOW + 20) {
-        // Fallback
-        const all = Array.from({length: 25}, (_, i) => i + 1);
-        return all.slice(0, quantity);
-    }
+    const window = trainingWindow(history.length, TRAINING_WINDOW);
+    if (window < MIN_TRAINING_ROWS) return frequencyFallback(history, quantity);
 
     const data: DataPoint[] = [];
 
@@ -218,7 +216,7 @@ export const generateRandomForestGame = (history: LotofacilResult[], quantity: n
     // For each game i (from 1 to TRAINING_WINDOW), we see if num appeared.
     // 'i' is the target index.
 
-    for (let i = 1; i <= TRAINING_WINDOW; i++) {
+    for (let i = 1; i <= window; i++) {
         const targetGame = history[i];
 
         // Optimization: Train on all 25 numbers

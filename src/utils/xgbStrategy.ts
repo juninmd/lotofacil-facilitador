@@ -1,5 +1,6 @@
 import type { LotofacilResult } from '../game';
 import { getCycleMissingNumbers } from './statistics';
+import { trainingWindow, frequencyFallback, MIN_TRAINING_ROWS } from './mlWindow';
 
 // --- Types ---
 
@@ -302,18 +303,15 @@ class XGBoostModel {
 
 export const generateXGBoostGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
     // Need at least enough history to train
-    if (history.length < TRAINING_WINDOW + 20) {
-        // Fallback
-        const all = Array.from({length: 25}, (_, i) => i + 1);
-        return all.slice(0, quantity);
-    }
+    const window = trainingWindow(history.length, TRAINING_WINDOW);
+    if (window < MIN_TRAINING_ROWS) return frequencyFallback(history, quantity);
 
     // 1. Prepare Training Data
     const trainingData: DataPoint[] = [];
 
     // Select a subset of games for training
     // Games 1 to 100
-    for(let i=1; i<=100; i++) {
+    for(let i=1; i<=window; i++) {
         const targetGame = history[i];
         if (!targetGame) break;
         for(let n=1; n<=25; n++) {
