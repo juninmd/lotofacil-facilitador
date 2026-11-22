@@ -1,5 +1,17 @@
 # AGENTS.md - AI Coding Agent Guidelines
 
+> **Regra de ouro:** Estatística existe pra dizer o possível, a matemática para fazer o impossível.
+
+## 0. Rodada semanal de aprimoramento (obrigatória para agentes)
+
+1. **Leia `docs/LEARNINGS.md` antes de tudo.** Não repita o que já falhou.
+2. Atualize a base (`node scripts/fetch_history.mjs`) e rode o benchmark:
+   `npx vitest run --config vitest.backtest.config.ts src/utils/weekly` (gera `docs/benchmarks/`).
+3. Teste ideias novas em `src/utils/weekly/contenders.ts` (`candidateContenders`). Só promova ao app o que tiver
+   z ≥ 2 **e** z ≥ 1 em cada metade (antiga e recente) do backtest longo. Escolher pelo melhor de muitas
+   variantes numa só amostra é sobreajuste: confirme em período separado.
+4. Registre em `docs/LEARNINGS.md` o que funcionou e o que falhou, com números, e abra um PR.
+
 These guidelines outline the principles and expectations for all AI coding agent development within this repository. Adherence to these principles is mandatory to ensure code quality, maintainability, and stability.
 
 ## 1. DRY (Don't Repeat Yourself)

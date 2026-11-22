@@ -27,6 +27,7 @@ function App() {
         {tab === 'search' && <SearchPanel />}
       </main>
       <footer className="mt-10 text-center text-xs text-white/40">
+        <p className="mb-1 italic text-white/60">“Estatística existe pra dizer o possível, a matemática para fazer o impossível.”</p>
         Aposta é entretenimento, não investimento. O sorteio é uniforme e independente — jogue com responsabilidade. +18.
       </footer>
     </div>

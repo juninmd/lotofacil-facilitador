@@ -1,5 +1,6 @@
 import type { LotofacilResult } from '../game';
 import { getCycleMissingNumbers } from './statistics';
+import { trainingWindow, frequencyFallback, MIN_TRAINING_ROWS } from './mlWindow';
 
 // --- Types ---
 
@@ -258,18 +259,15 @@ class GradientBoostingClassifier {
 
 export const generateGradientBoostingGame = (history: LotofacilResult[], quantity: number = 15): number[] => {
     // Need at least enough history to train
-    if (history.length < TRAINING_WINDOW + 20) {
-        // Fallback to naive random/last
-        const all = Array.from({length: 25}, (_, i) => i + 1);
-        return all.slice(0, quantity);
-    }
+    const window = trainingWindow(history.length, TRAINING_WINDOW);
+    if (window < MIN_TRAINING_ROWS) return frequencyFallback(history, quantity);
 
     // 1. Prepare Training Data
     const trainingData: DataPoint[] = [];
 
     // Select a subset of games for training to keep it fast
     // Games 1 to 50
-    for(let i=1; i<=50; i++) {
+    for(let i=1; i<=Math.min(50, window); i++) {
         const targetGame = history[i];
         for(let n=1; n<=25; n++) {
             const label = targetGame.listaDezenas.includes(n) ? 1 : 0;
