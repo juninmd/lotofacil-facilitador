@@ -93,44 +93,37 @@ export const generateRegressionGame = (
   // We want to learn weights [w_freq10, w_freq50, w_delay, w_inPrev, w_missing, w_bias]
   const weights = [0.1, 0.1, 0.1, 0.1, 0.5, 0.0]; // Initialize with some heuristic guess
 
-  // Training Loop
+  // Features do not depend on the weights: extract them once, not once per epoch.
+  const samples: { features: Features; actual: number }[] = [];
+  for (let i = 1; i <= TRAINING_WINDOW; i++) {
+    const targetGame = history[i]; // The game we want to predict result for
+    for (let num = 1; num <= 25; num++) {
+      samples.push({ features: extractFeatures(history, i, num), actual: targetGame.listaDezenas.includes(num) ? 1.0 : 0.0 });
+    }
+  }
+
+  // Training Loop: predict games 1..TRAINING_WINDOW (using data from i+1 onwards), same order every epoch
   for (let epoch = 0; epoch < EPOCHS; epoch++) {
-    // Iterate over the training window (e.g., predict game 0, 1, 2... up to 50)
-    // Actually, we simulate "past" predictions.
-    // Let's predict games from index 1 to 50 (using data from i+1 onwards)
+    for (const { features, actual } of samples) {
+      // Calculate Prediction (Hypothesis)
+      const z = (weights[0] * features.freq10) +
+                (weights[1] * features.freq50) +
+                (weights[2] * features.delay) +
+                (weights[3] * features.inPrevious) +
+                (weights[4] * features.missingCycle) +
+                (weights[5] * features.bias);
 
-    for (let i = 1; i <= TRAINING_WINDOW; i++) {
-      const targetGame = history[i]; // The game we want to predict result for
+      // Error (Difference)
+      const error = sigmoid(z) - actual;
 
-      // For each number 1-25
-      for (let num = 1; num <= 25; num++) {
-        const features = extractFeatures(history, i, num);
-
-        // Calculate Prediction (Hypothesis)
-        const z = (weights[0] * features.freq10) +
-                  (weights[1] * features.freq50) +
-                  (weights[2] * features.delay) +
-                  (weights[3] * features.inPrevious) +
-                  (weights[4] * features.missingCycle) +
-                  (weights[5] * features.bias);
-
-        const predictedProb = sigmoid(z);
-
-        // Actual Result (1 if appeared, 0 if not)
-        const actual = targetGame.listaDezenas.includes(num) ? 1.0 : 0.0;
-
-        // Error (Difference)
-        const error = predictedProb - actual;
-
-        // Update Weights (Gradient Descent)
-        // w = w - alpha * error * feature
-        weights[0] -= LEARNING_RATE * error * features.freq10;
-        weights[1] -= LEARNING_RATE * error * features.freq50;
-        weights[2] -= LEARNING_RATE * error * features.delay;
-        weights[3] -= LEARNING_RATE * error * features.inPrevious;
-        weights[4] -= LEARNING_RATE * error * features.missingCycle;
-        weights[5] -= LEARNING_RATE * error * features.bias;
-      }
+      // Update Weights (Gradient Descent)
+      // w = w - alpha * error * feature
+      weights[0] -= LEARNING_RATE * error * features.freq10;
+      weights[1] -= LEARNING_RATE * error * features.freq50;
+      weights[2] -= LEARNING_RATE * error * features.delay;
+      weights[3] -= LEARNING_RATE * error * features.inPrevious;
+      weights[4] -= LEARNING_RATE * error * features.missingCycle;
+      weights[5] -= LEARNING_RATE * error * features.bias;
     }
   }
 
