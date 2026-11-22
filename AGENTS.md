@@ -1,90 +1,61 @@
-# AGENTS.md - AI Coding Agent Guidelines
+# AGENTS.md
+
+Lotofácil Facilitador: a web app (Vite, React, TypeScript, Tailwind) that generates and analyzes number sets for the Lotofácil lottery: generators, statistics, and Monte Carlo simulation.
 
 > **Regra de ouro:** Estatística existe pra dizer o possível, a matemática para fazer o impossível.
 
-## 0. Rodada semanal de aprimoramento (obrigatória para agentes)
+## Stack
 
-1. **Leia `docs/LEARNINGS.md` antes de tudo.** Não repita o que já falhou.
-2. Atualize a base (`node scripts/fetch_history.mjs`) e rode o benchmark:
-   `npx vitest run --config vitest.backtest.config.ts src/utils/weekly` (gera `docs/benchmarks/`).
-3. Teste ideias novas em `src/utils/weekly/contenders.ts` (`candidateContenders`). Só promova ao app o que tiver
-   z ≥ 2 **e** z ≥ 1 em cada metade (antiga e recente) do backtest longo. Escolher pelo melhor de muitas
-   variantes numa só amostra é sobreajuste: confirme em período separado.
-4. Registre em `docs/LEARNINGS.md` o que funcionou e o que falhou, com números, e abra um PR.
+- Vite, React, TypeScript, Tailwind, Bootstrap; TensorFlow.js for the model-based generators.
+- Vitest for unit tests and the backtest. ESLint with `eslint.config.js`.
+- pnpm (`pnpm-lock.yaml`).
 
-These guidelines outline the principles and expectations for all AI coding agent development within this repository. Adherence to these principles is mandatory to ensure code quality, maintainability, and stability.
+## Commands
 
-## 1. DRY (Don't Repeat Yourself)
+```bash
+pnpm install
+pnpm dev                 # Vite dev server
+pnpm build               # tsc -b && vite build
+pnpm lint                # eslint .
+pnpm test                # vitest run
+pnpm test:coverage       # vitest run --coverage
+pnpm test:backtest       # vitest run --config vitest.backtest.config.ts
+pnpm data:update         # node scripts/fetch_history.mjs (updates the history data)
+npx vitest run --config vitest.backtest.config.ts src/utils/weekly   # weekly benchmark, writes docs/benchmarks/
+```
 
-- All code should be encapsulated within individual files and functions.
-- Duplicate code should be refactored into reusable components or functions.
-- Avoid creating redundant logic or data structures.
-- Prioritize creating new functionality instead of modifying existing code.
+## Structure
 
-## 2. KISS (Keep It Simple, Stupid)
+- `src/utils/weekly/`: weekly benchmark. `contenders.ts` exports `candidateContenders`, where new ideas are tested.
+- `src/utils/mc/`: Monte Carlo simulation.
+- `docs/LEARNINGS.md`: results of past weekly rounds, with numbers.
+- `docs/benchmarks/`: output of the weekly benchmark.
+- `scripts/`: data update (`fetch_history.mjs`) and verification scripts.
+- `.Jules/palette.md`: notes kept by the Jules agent. Read it before UI work.
+- `.github/workflows/`: `pages.yml` (GitHub Pages), `validate.yml` (base-actions), `sast.yml`, `security.yml`, `release-drafter.yml`.
 
-- Code should be as concise and easy to understand as possible.
-- Simplify complex logic whenever feasible.
-- Avoid unnecessary abstraction.
-- Focus on the essential requirements of a feature.
+## Weekly improvement round (required for agents)
 
-## 3. SOLID Principles
+1. Read `docs/LEARNINGS.md` first. Do not repeat what already failed.
+2. Update the history (`node scripts/fetch_history.mjs`), then run the benchmark command above. It writes `docs/benchmarks/`.
+3. Test new ideas in `src/utils/weekly/contenders.ts` (`candidateContenders`). Promote an idea to the app only if it has z ≥ 2 **and** z ≥ 1 in each half (old and recent) of the long backtest. Picking the best of many variants on one sample is overfitting. Confirm on a separate period.
+4. Record what worked and what failed in `docs/LEARNINGS.md`, with numbers, and open a PR.
 
-- **Single Responsibility Principle:** Each class or function should have one, and only one, well-defined responsibility.
-- **Open/Closed Principle:**  The system should be extensible through public interfaces, without modifying the internal code.
-- **Liskov Substitution Principle:**  Subclasses should be substitutable for their base classes without altering the correctness of the program.
-- **Interface Segregation Principle:** Each client should be required to participate in only one interface.
-- **Dependency Inversion Principle:** Interfaces should be replaced by their concrete implementations.
+## Conventions
 
-## 4. YAGNI (You Aren't Gonna Need It)
+- Each file has at most 180 lines of code.
+- Write tests before the implementation. Cover edge cases and error conditions. Mock the agent's logic in tests.
+- Target at least 80% coverage for functions and classes. The Vitest config does not enforce a threshold.
+- Document the why of the code, not the what. Document assumptions and dependencies.
+- Keep the README current with setup and usage.
+- Commit in small, focused changes. Follow the existing commit style in `git log`.
+- Principles: DRY, KISS, YAGNI, SOLID. Build only what the task requires.
 
-- Only implement functionality that is explicitly required at a given point in time.
-- Avoid implementing features or dependencies that are not currently needed.
-- Refactor code to remove unnecessary complexity and unused components.
+## Gotchas
 
-## 5. Code Structure & File Layout
-
-- Each file should have a descriptive name that clearly identifies its purpose.
-- Files should follow a logical organizational structure.
-- Comments should explain the *why* behind the code, not just the *what*.
-- Use consistent indentation and formatting throughout the codebase.
-- Use meaningful variable and function names.
-- Focus on well-defined data structures.
-
-## 6. File Length & Code Coverage
-
-- Each file must have a maximum of 180 lines of code.
-- Achieve at least 80% test coverage for all functions and classes.
-- Utilize unit tests to verify expected behavior.
-
-## 7. Testing & Verification
-
-- All code must be thoroughly tested with unit tests.
-- Unit tests should cover all critical functionality.
-- Test cases should be designed to cover edge cases and potential error conditions.
-- Test cases should be written before code is implemented.
--  Use mock objects to isolate the AI agent's logic during testing.
-
-## 8.  Development Process
-
-- Commit frequently with small, focused changes.
-- Conduct code reviews to ensure adherence to guidelines.
-- Utilize version control (Git) for collaborative development.
-- Embrace continuous integration and continuous deployment (CI/CD).
-
-## 9.  Specific Requirements (Adapt as needed based on project)**
-
--  [Include specific algorithm or data structure requirements here]
--  [Include any specific constraint requirements (e.g., maximum performance, memory usage)]
-
-## 10.  Documentation
-
--  Provide clear and concise documentation for all functions and classes.
--  Document any assumptions or dependencies.
--  Include a README file explaining the project's purpose, setup instructions, and usage.
-
-
-These guidelines are intended to serve as a foundation for the AGENTS.md project.  Continuous refinement and adaptation are encouraged based on feedback and evolving project requirements.  All development efforts must prioritize quality, maintainability, and the successful implementation of the AI agent's core functionality.
+- Every push to `master` deploys to GitHub Pages (`pages.yml`). Merging to `master` is a publish.
+- The README says the build uses `--base=/lotofacil-facilitador/`, but `package.json` and `vite.config.ts` do not set it. Check the Pages base before relying on it.
+- `scripts/verify_*.ts` are standalone checks that no script or workflow runs. Run them by hand.
 
 <!-- base-actions-main-policy -->
 ## GitHub Actions — padrão obrigatório (@main)
