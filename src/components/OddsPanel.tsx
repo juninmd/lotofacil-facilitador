@@ -1,8 +1,24 @@
 import React, { useState } from 'react';
-import { prizeOddsTable } from '../utils/prizeOdds';
+import { DataTable, type Column } from '@juninmd/sonido';
+import { prizeOddsTable, type PrizeOdds } from '../utils/prizeOdds';
 import { compareBudgetPlans } from '../utils/budgetSimulator';
 import { formatBRL, formatInt, formatPct } from '../format';
 import { Callout, Card } from './ui';
+
+const oddsColumns: Column<PrizeOdds>[] = [
+  { key: 'dezenas', label: 'Dezenas', render: (o) => <strong className="text-white">{o.dezenas}</strong> },
+  { key: 'custo', label: 'Custo', render: (o) => <span className="text-white/75">{formatBRL(o.custo)}</span> },
+  {
+    key: 'pGanharAlgo',
+    label: 'Ganhar algo',
+    render: (o) => (
+      <span className="text-emerald-300">
+        {formatPct(o.pGanharAlgo)} <span className="text-white/40">· 1 em {formatInt(o.umEmQuantos)}</span>
+      </span>
+    ),
+  },
+  { key: 'umEm15', label: 'Cravar 15', render: (o) => <span className="text-amber-300">1 em {formatInt(o.umEm15)}</span> },
+];
 
 const OddsPanel: React.FC = () => {
   const [budget, setBudget] = useState(200);
@@ -11,22 +27,7 @@ const OddsPanel: React.FC = () => {
   return (
     <div className="grid gap-6">
       <Card eyebrow="Probabilidade exata" title="Chance por tamanho de aposta">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[34rem] text-sm">
-            <thead><tr className="text-left text-[11px] uppercase tracking-wider text-white/45">
-              <th className="pb-2 font-semibold">Dezenas</th><th className="pb-2 font-semibold">Custo</th><th className="pb-2 font-semibold">Ganhar algo</th><th className="pb-2 font-semibold">Cravar 15</th></tr></thead>
-            <tbody>
-              {odds.map((o) => (
-                <tr key={o.dezenas} className="border-t border-white/10 tabular-nums">
-                  <td className="py-2.5 font-bold text-white">{o.dezenas}</td>
-                  <td className="py-2.5 text-white/75">{formatBRL(o.custo)}</td>
-                  <td className="py-2.5 text-emerald-300">{formatPct(o.pGanharAlgo)} <span className="text-white/40">· 1 em {formatInt(o.umEmQuantos)}</span></td>
-                  <td className="py-2.5 text-amber-300">1 em {formatInt(o.umEm15)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <DataTable label="Chance por tamanho de aposta" columns={oddsColumns} rows={odds} rowKey={(o) => String(o.dezenas)} />
       </Card>
       <Card eyebrow="Orçamento" title="Quanto você quer gastar?">
         <label htmlFor="budget" className="mb-2 flex justify-between text-sm font-medium text-white/80"><span>Orçamento</span><span className="tabular-nums text-violet-300">{formatBRL(budget)}</span></label>
@@ -41,7 +42,7 @@ const OddsPanel: React.FC = () => {
             </div>
           ))}
         </div>
-        <div className="mt-4"><Callout tone="warn">O retorno esperado é ~−57% em qualquer tamanho de aposta. Jogue como entretenimento, nunca como investimento.</Callout></div>
+        <div className="mt-4"><Callout tone="warn">O retorno esperado é ~-57% em qualquer tamanho de aposta. Jogue como entretenimento, nunca como investimento.</Callout></div>
       </Card>
     </div>
   );

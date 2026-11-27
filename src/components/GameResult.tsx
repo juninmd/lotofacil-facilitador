@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { Button } from '@juninmd/sonido';
 import LotteryBall from '../LotteryBall';
 import { Callout, Meter, Stat } from './ui';
 import { formatBRL } from '../format';
@@ -32,8 +33,8 @@ const GameResult: React.FC<Props> = ({ game, confidence, projected, backtest }) 
         {projected && <Stat label="Prêmio médio" value={formatBRL(projected.estimatedPrize)} tone="warn" sub="por concurso (histórico)" />}
       </div>
       <div className="mt-4 flex flex-wrap justify-center gap-2">
-        <button className="btn-ghost rounded-xl px-4 py-2 text-sm font-semibold" onClick={() => copy(game.join(' '), setCopied)}>{copied ? '✓ Copiado' : 'Copiar dezenas'}</button>
-        <button className="btn-ghost rounded-xl px-4 py-2 text-sm font-semibold" onClick={() => copy(clickerScript(game), setJsCopied)}>{jsCopied ? '✓ Script copiado' : 'Copiar script do volante'}</button>
+        <Button variant="ghost" size="sm" onClick={() => copy(game.join(' '), setCopied)}>{copied ? '✓ Copiado' : 'Copiar dezenas'}</Button>
+        <Button variant="ghost" size="sm" onClick={() => copy(clickerScript(game), setJsCopied)}>{jsCopied ? '✓ Script copiado' : 'Copiar script do volante'}</Button>
       </div>
       {backtest && (
         <div className="mt-5 border-t border-white/10 pt-4">

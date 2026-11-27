@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
+import { Badge, Button, Switch } from '@juninmd/sonido';
 import LotteryBall from '../LotteryBall';
 import { useCrowdContext } from '../hooks/useCrowdContext';
 import { buildPlan, type McPlan } from '../utils/mc/plan';
 import { formatBRL, formatPct } from '../format';
-import { Callout, Card, Meter, Spinner, Stat } from './ui';
+import { Callout, Card, Meter, Stat } from './ui';
 import BiasCard from './BiasCard';
 
 const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => {
@@ -39,22 +40,14 @@ const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => 
             </label>
             <input id="mc-games" type="range" min={2} max={40} value={games} onChange={(e) => setGames(+e.target.value)} className="w-full accent-violet-500" />
           </div>
-          <div className="grid gap-2">
-            <label className="chip flex cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5" aria-pressed={avoidCrowd}>
-              <input type="checkbox" checked={avoidCrowd} onChange={(e) => setAvoidCrowd(e.target.checked)} className="h-4 w-4 accent-violet-500" />
-              <span><span className="block text-sm font-semibold text-white">Evitar jogos populares</span>
-                <span className="block text-[11px] text-white/55">Poisson nos rateios reais</span></span>
-            </label>
-            <label className="chip flex cursor-pointer items-center gap-3 rounded-xl px-4 py-2.5" aria-pressed={useBias}>
-              <input type="checkbox" checked={useBias} onChange={(e) => setUseBias(e.target.checked)} className="h-4 w-4 accent-violet-500" />
-              <span><span className="block text-sm font-semibold text-white">Usar viés persistente (VPE)</span>
-                <span className="block text-[11px] text-white/55">Bayes empírico sobre 3.738 concursos</span></span>
-            </label>
+          <div className="grid content-center gap-3">
+            <Switch checked={avoidCrowd} onChange={setAvoidCrowd} label="Evitar jogos populares" description="Poisson nos rateios reais" />
+            <Switch checked={useBias} onChange={setUseBias} label="Usar viés persistente (VPE)" description="Bayes empírico sobre 3.738 concursos" />
           </div>
         </div>
-        <button onClick={run} disabled={!ctx || busy} className="btn-primary mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 font-bold text-white">
-          {busy ? <><Spinner /> Simulando 126 mil sorteios…</> : !ctx && !failed ? <><Spinner /> Carregando histórico…</> : '🎲 Otimizar portfólio'}
-        </button>
+        <Button type="button" onClick={run} loading={busy || (!ctx && !failed)} disabled={!ctx} size="lg" className="mt-5 w-full">
+          {busy ? 'Simulando 126 mil sorteios…' : !ctx && !failed ? 'Carregando histórico…' : '🎲 Otimizar portfólio'}
+        </Button>
         {failed && <p role="alert" className="mt-3 text-sm text-rose-300">Falha ao carregar o histórico local.</p>}
       </Card>
 
@@ -107,8 +100,8 @@ const MonteCarloPanel: React.FC<{ accumulated: number }> = ({ accumulated }) => 
                 <li key={i} className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/[0.03] px-3 py-2.5">
                   <span className="w-6 text-xs font-bold text-white/40">{String(i + 1).padStart(2, '0')}</span>
                   <div className="flex flex-1 flex-wrap gap-1">{t.map((n) => <LotteryBall key={n} number={n} size="sm" tone={n <= 13 ? 'brand' : 'cold'} />)}</div>
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${plan.crowdIndexes[i] < 1 ? 'bg-emerald-400/15 text-emerald-300' : 'bg-white/10 text-white/60'}`}>
-                    multidão {plan.crowdIndexes[i].toFixed(2)}×
+                  <span className="flex items-center gap-1 text-[11px] text-white/60">
+                    multidão <Badge appearance="count" tone={plan.crowdIndexes[i] < 1 ? 'success' : 'neutral'}>{plan.crowdIndexes[i].toFixed(2)}</Badge>×
                   </span>
                 </li>
               ))}

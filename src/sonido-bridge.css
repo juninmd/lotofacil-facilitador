@@ -1,0 +1,96 @@
+/*
+ * Ponte de identidade entre o Sonido e o "noite de sorteio" do lotofacil.
+ * O app continua violeta/fúcsia; o Sonido só herda os tokens daqui.
+ */
+:root {
+  --sn-color-bg: var(--color-ink);
+  --sn-color-surface: var(--color-panel);
+  --sn-color-surface-2: #1a1a2e;
+  --sn-color-surface-hover: #23233a;
+  --sn-color-border: #2a2a40;
+  --sn-color-border-soft: #202033;
+  --sn-color-text: #e7e7f5;
+  --sn-color-text-dim: #a8a8c2;
+  --sn-color-text-faint: #8585a3;
+  --sn-color-accent: var(--color-brand);
+  --sn-color-accent-2: var(--color-brand-2);
+  --sn-color-success: var(--color-gain);
+  --sn-color-warning: var(--color-warn);
+  --sn-color-danger: var(--color-loss);
+  --sn-color-info: #38bdf8;
+  --sn-gradient: linear-gradient(90deg, var(--color-brand), var(--color-brand-2));
+  --sn-gradient-soft: linear-gradient(135deg, rgb(139 92 246 / 0.16), rgb(217 70 239 / 0.06));
+  --sn-ring: 0 0 0 4px rgb(139 92 246 / 0.28);
+  --sn-font: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sn-font-display: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sn-radius: 0.85rem;
+  --sn-radius-lg: 1.25rem;
+}
+
+/* Abas principais: o card segmentado do app em largura total. */
+.lc-tabs.sn-tabs--pill {
+  display: flex;
+  width: 100%;
+}
+.lc-tabs .sn-tab {
+  flex: 1;
+  justify-content: center;
+  border-radius: 0.75rem;
+  padding: 0 6px;
+  gap: 4px;
+  font-size: 12px;
+}
+
+/* Valores longos ("1 em 3.268.760") precisam quebrar em cards estreitos. */
+.lc-stat .sn-stattile__value {
+  overflow: visible;
+  white-space: normal;
+  font-size: var(--sn-text-md);
+  line-height: 1.15;
+}
+
+/* A barra do Sonido mantém o gradiente de ação; estas variantes preservam
+   o verde/neutro que o comparativo de algoritmos já usava. */
+.lc-meter--gain .sn-progress__bar {
+  background: linear-gradient(90deg, #34d399, #14b8a6);
+}
+.lc-meter--neutral .sn-progress__bar {
+  background: linear-gradient(90deg, #94a3b8, #64748b);
+}
+
+/* Chips de seleção (algoritmo e dezenas) continuam com duas linhas, agora
+   desenhados pelo Button do Sonido em modo outline/xs. */
+.lc-algo.sn-button,
+.lc-chip.sn-button {
+  height: auto;
+  padding: 0.6rem 0.75rem;
+}
+.lc-algo.sn-button {
+  justify-content: flex-start;
+  text-align: left;
+}
+.lc-algo .sn-button__label,
+.lc-chip .sn-button__label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lc-algo .sn-button__label {
+  align-items: flex-start;
+  text-align: left;
+}
+.lc-chip .sn-button__label {
+  align-items: center;
+}
+.lc-algo .sn-button__label strong {
+  color: var(--sn-color-text);
+  font-size: var(--sn-text-sm);
+  font-weight: 600;
+}
+.lc-algo .sn-button__label span,
+.lc-chip .sn-button__label span {
+  color: var(--sn-color-text-dim);
+  font-size: 11px;
+  font-weight: 400;
+}
+
