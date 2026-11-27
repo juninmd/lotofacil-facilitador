@@ -11,6 +11,9 @@ importers:
 
   .:
     dependencies:
+      '@juninmd/sonido':
+        specifier: ^2.4.0
+        version: 2.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       '@tensorflow/tfjs':
         specifier: ^4.22.0
         version: 4.22.0(seedrandom@3.0.5)
@@ -260,6 +263,13 @@ packages:
 
   '@jridgewell/trace-mapping@0.3.31':
     resolution: {integrity: sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw==}
+
+  '@juninmd/sonido@2.4.0':
+    resolution: {integrity: sha512-t8JoPwuhghqJSzhL/4rAmIeYUW5rissPKtB7Eub5SeDD3pCKO1wqhI+9MaDdny5w3OdPmBoKM37JCdOdxkEf5g==}
+    engines: {node: '>=20'}
+    peerDependencies:
+      react: '>=18'
+      react-dom: '>=18'
 
   '@keyv/bigmap@1.3.1':
     resolution: {integrity: sha512-WbzE9sdmQtKy8vrNPa9BRnwZh5UF4s1KTmSK0KUVLo3eff5BlQNNWDnFOouNpKfPKDnms9xynJjsMYjMaT/aFQ==}
@@ -1971,6 +1981,11 @@ snapshots:
     dependencies:
       '@jridgewell/resolve-uri': 3.1.3
       '@jridgewell/sourcemap-codec': 1.6.0
+
+  '@juninmd/sonido@2.4.0(react-dom@19.3.1(react@19.3.1))(react@19.3.1)':
+    dependencies:
+      react: 19.3.1
+      react-dom: 19.3.1(react@19.3.1)
 
   '@keyv/bigmap@1.3.1(keyv@5.6.0)':
     dependencies:

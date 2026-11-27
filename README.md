@@ -22,7 +22,7 @@ Este projeto é uma aplicação web desenvolvida para auxiliar na geração e an
 
 ## Tecnologias
 
-React 19, TypeScript, Vite, Tailwind CSS 4, React-Bootstrap, TensorFlow.js (estratégias de ML), Vitest. Gerenciador de pacotes: **pnpm** (`pnpm-lock.yaml`).
+React 19, TypeScript, Vite, Tailwind CSS 4, React-Bootstrap, TensorFlow.js (estratégias de ML), Vitest. Componentes de UI: [`@juninmd/sonido`](https://github.com/juninmd/sonido) (ver `docs/sonido-migration/`). Gerenciador de pacotes: **pnpm** (`pnpm-lock.yaml`).
 
 ## Como rodar
 
